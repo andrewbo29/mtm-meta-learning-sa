@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
     # Model
     parser.add_argument('--hidden-size', type=int, default=64,
-        help='Number of channels in each convolution layer of the VGG network '
+        help='Number of channels in each convolution layer of the network '
         '(default: 64).')
 
     # Optimization
