@@ -108,6 +108,8 @@ def ModelConvOmniglot(out_features, hidden_size=64):
 
 def ModelConvMiniImagenet(out_features, hidden_size=64):
     return MetaConvModel(3, out_features, hidden_size=hidden_size,
+                         # This matches original implementation
+                         # with comment 'assumes max pooling'
                          feature_size=5 * 5 * hidden_size)
 
 def ModelMLPSinusoid(hidden_sizes=[40, 40]):
