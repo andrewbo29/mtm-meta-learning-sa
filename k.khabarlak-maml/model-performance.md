@@ -8,7 +8,7 @@ Accuracy metrics for most common few-shot datasets:
 | Model                          | 1-shot 5-way | 5-shot 5-way      | 1-shot 20-way     | 5-shot 20-way     |
 | ------------------------------ | ------------ | ----------------- | ----------------- | ----------------- |
 | MAML (as desc in <sup>1</sup>) | 98.7%        | 99.9%             | 95.8%             | 98.9%             |
-| MAML (reproduced)              | 98.4%        | 99.4%<sup>2</sup> | 91.0%<sup>2</sup> |      <sup>2</sup> |
+| MAML (reproduced)              | 98.4%        | 99.4%<sup>2</sup> | 91.0%<sup>2</sup> | 94.4%<sup>2</sup> |
 <br/> <br/>
 
 ## CIFAR-FS
