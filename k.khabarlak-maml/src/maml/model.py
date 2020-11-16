@@ -9,10 +9,11 @@ def conv_block(in_channels, out_channels, **kwargs):
     return MetaSequential(OrderedDict([
         ('conv', MetaConv2d(in_channels, out_channels, **kwargs)),
         ('norm', nn.BatchNorm2d(out_channels, momentum=1.,
-            track_running_stats=False)),
+                                track_running_stats=False)),
         ('relu', nn.ReLU()),
         ('pool', nn.MaxPool2d(2))
     ]))
+
 
 class MetaConvModel(MetaModule):
     """4-layer Convolutional Neural Network architecture from [1].
@@ -37,6 +38,7 @@ class MetaConvModel(MetaModule):
            for Fast Adaptation of Deep Networks. International Conference on
            Machine Learning (ICML) (https://arxiv.org/abs/1703.03400)
     """
+
     def __init__(self, in_channels, out_features, hidden_size=64, feature_size=64):
         super(MetaConvModel, self).__init__()
         self.in_channels = in_channels
@@ -62,6 +64,7 @@ class MetaConvModel(MetaModule):
         logits = self.classifier(features, params=self.get_subdict(params, 'classifier'))
         return logits
 
+
 class MetaMLPModel(MetaModule):
     """Multi-layer Perceptron architecture from [1].
 
@@ -83,6 +86,7 @@ class MetaMLPModel(MetaModule):
            for Fast Adaptation of Deep Networks. International Conference on
            Machine Learning (ICML) (https://arxiv.org/abs/1703.03400)
     """
+
     def __init__(self, in_features, out_features, hidden_sizes):
         super(MetaMLPModel, self).__init__()
         self.in_features = in_features
@@ -91,10 +95,11 @@ class MetaMLPModel(MetaModule):
 
         layer_sizes = [in_features] + hidden_sizes
         self.features = MetaSequential(OrderedDict([('layer{0}'.format(i + 1),
-            MetaSequential(OrderedDict([
-                ('linear', MetaLinear(hidden_size, layer_sizes[i + 1], bias=True)),
-                ('relu', nn.ReLU())
-            ]))) for (i, hidden_size) in enumerate(layer_sizes[:-1])]))
+                                                     MetaSequential(OrderedDict([
+                                                         ('linear',
+                                                          MetaLinear(hidden_size, layer_sizes[i + 1], bias=True)),
+                                                         ('relu', nn.ReLU())
+                                                     ]))) for (i, hidden_size) in enumerate(layer_sizes[:-1])]))
         self.classifier = MetaLinear(hidden_sizes[-1], out_features, bias=True)
 
     def forward(self, inputs, params=None):
@@ -102,9 +107,11 @@ class MetaMLPModel(MetaModule):
         logits = self.classifier(features, params=self.get_subdict(params, 'classifier'))
         return logits
 
+
 def ModelConvOmniglot(out_features, hidden_size=64):
     return MetaConvModel(1, out_features, hidden_size=hidden_size,
                          feature_size=hidden_size)
+
 
 def ModelConvMiniImagenet(out_features, hidden_size=64):
     return MetaConvModel(3, out_features, hidden_size=hidden_size,
@@ -112,8 +119,10 @@ def ModelConvMiniImagenet(out_features, hidden_size=64):
                          # with comment 'assumes max pooling'
                          feature_size=5 * 5 * hidden_size)
 
+
 def ModelMLPSinusoid(hidden_sizes=[40, 40]):
     return MetaMLPModel(1, 1, hidden_sizes)
+
 
 if __name__ == '__main__':
     model = ModelMLPSinusoid()
