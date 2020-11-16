@@ -1,10 +1,10 @@
 python ../src/train.py ../datasets/ \
-    --dataset miniimagenet \
-    --num-ways 5 \
-    --num-shots 5 \
+    --dataset cifarfs \
+    --num-ways 2 \
+    --num-shots 1 \
     --num-steps 5 \
     --step-size 0.1 \
-    --batch-size 2 \
+    --batch-size 4 \
     --num-workers 4 \
     --num-epochs 600 \
     --use-cuda \
