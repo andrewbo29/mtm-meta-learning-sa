@@ -4,6 +4,7 @@ python ../src/train.py ../datasets/omniglot/ \
     --num-shots 5 \
     --num-steps 5 \
     --step-size 0.1 \
+    --no-max-pool \
     --batch-size 2 \
     --num-workers 4 \
     --num-epochs 600 \

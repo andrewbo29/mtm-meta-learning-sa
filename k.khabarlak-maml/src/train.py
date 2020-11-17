@@ -39,6 +39,7 @@ def main(args):
                                       args.num_ways,
                                       args.num_shots,
                                       args.num_shots_test,
+                                      args.no_max_pool,
                                       hidden_size=args.hidden_size)
 
     meta_train_dataloader = BatchMetaDataLoader(benchmark.meta_train_dataset,
@@ -113,6 +114,7 @@ if __name__ == '__main__':
                         help='Number of classes per task (N in "N-way", default: 5).')
     parser.add_argument('--num-shots', type=int, default=5,
                         help='Number of training example per class (k in "k-shot", default: 5).')
+    # following Ravi: "15 examples per class were used for evaluating the post-update meta-gradient"
     parser.add_argument('--num-shots-test', type=int, default=15,
                         help='Number of test example per class. If negative, same as the number '
                              'of training examples `--num-shots` (default: 15).')
@@ -121,6 +123,9 @@ if __name__ == '__main__':
     parser.add_argument('--hidden-size', type=int, default=64,
                         help='Number of channels in each convolution layer of the network '
                              '(default: 64).')
+    # Should be True for cifarfs and miniimagenet, False for omniglot
+    parser.add_argument('--no-max-pool', action='store_false', default=True,
+                        help='True to use strided conv model, False to use MaxPooled model')
 
     # Optimization
     parser.add_argument('--batch-size', type=int, default=25,

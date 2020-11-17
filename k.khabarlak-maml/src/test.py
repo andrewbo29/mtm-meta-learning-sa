@@ -27,6 +27,7 @@ def main(args):
                                       config['num_ways'],
                                       config['num_shots'],
                                       config['num_shots_test'],
+                                      config['use_max_pool'],
                                       hidden_size=config['hidden_size'])
 
     with open(config['model_path'], 'rb') as f:

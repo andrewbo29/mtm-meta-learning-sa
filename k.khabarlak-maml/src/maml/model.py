@@ -5,14 +5,19 @@ from torchmeta.modules import (MetaModule, MetaConv2d, MetaBatchNorm2d,
                                MetaSequential, MetaLinear)
 
 
-def conv_block(in_channels, out_channels, **kwargs):
-    return MetaSequential(OrderedDict([
-        ('conv', MetaConv2d(in_channels, out_channels, **kwargs)),
+def conv_block(in_channels, out_channels, no_max_pool, **kwargs):
+    stride = 2 if no_max_pool else 1
+    model = OrderedDict([
+        ('conv', MetaConv2d(in_channels, out_channels, stride=stride, **kwargs)),
         ('norm', nn.BatchNorm2d(out_channels, momentum=1.,
                                 track_running_stats=False)),
-        ('relu', nn.ReLU()),
-        ('pool', nn.MaxPool2d(2))
-    ]))
+        ('relu', nn.ReLU())
+    ])
+
+    if not no_max_pool:
+        model['pool'] = nn.MaxPool2d(2)
+
+    return MetaSequential(model)
 
 
 class MetaConvModel(MetaModule):
@@ -39,7 +44,7 @@ class MetaConvModel(MetaModule):
            Machine Learning (ICML) (https://arxiv.org/abs/1703.03400)
     """
 
-    def __init__(self, in_channels, out_features, hidden_size=64, feature_size=64):
+    def __init__(self, in_channels, out_features, no_max_pool, hidden_size=64, feature_size=64):
         super(MetaConvModel, self).__init__()
         self.in_channels = in_channels
         self.out_features = out_features
@@ -47,14 +52,14 @@ class MetaConvModel(MetaModule):
         self.feature_size = feature_size
 
         self.features = MetaSequential(OrderedDict([
-            ('layer1', conv_block(in_channels, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True)),
-            ('layer2', conv_block(hidden_size, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True)),
-            ('layer3', conv_block(hidden_size, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True)),
-            ('layer4', conv_block(hidden_size, hidden_size, kernel_size=3,
-                                  stride=1, padding=1, bias=True))
+            ('layer1', conv_block(in_channels, hidden_size, no_max_pool,
+                                  kernel_size=3, padding=1, bias=True)),
+            ('layer2', conv_block(hidden_size, hidden_size, no_max_pool,
+                                  kernel_size=3, padding=1, bias=True)),
+            ('layer3', conv_block(hidden_size, hidden_size, no_max_pool,
+                                  kernel_size=3, padding=1, bias=True)),
+            ('layer4', conv_block(hidden_size, hidden_size, no_max_pool,
+                                  kernel_size=3, padding=1, bias=True))
         ]))
         self.classifier = MetaLinear(feature_size, out_features, bias=True)
 
@@ -108,20 +113,20 @@ class MetaMLPModel(MetaModule):
         return logits
 
 
-def ModelConvOmniglot(out_features, hidden_size=64):
-    return MetaConvModel(1, out_features, hidden_size=hidden_size,
+def ModelConvOmniglot(out_features, no_max_pool, hidden_size=64):
+    return MetaConvModel(1, out_features, no_max_pool, hidden_size=hidden_size,
                          feature_size=hidden_size)
 
 
-def ModelConvMiniImagenet(out_features, hidden_size=64):
-    return MetaConvModel(3, out_features, hidden_size=hidden_size,
+def ModelConvMiniImagenet(out_features, no_max_pool, hidden_size=64):
+    return MetaConvModel(3, out_features, no_max_pool, hidden_size=hidden_size,
                          # This matches original implementation
                          # with comment 'assumes max pooling'
                          feature_size=5 * 5 * hidden_size)
 
 
-def ModelConvCifarFs(out_features, hidden_size=64):
-    return MetaConvModel(3, out_features, hidden_size=hidden_size,
+def ModelConvCifarFs(out_features, no_max_pool, hidden_size=64):
+    return MetaConvModel(3, out_features, no_max_pool, hidden_size=hidden_size,
                          # This matches original implementation
                          # with comment 'assumes max pooling'
                          feature_size=2 * 2 * hidden_size)

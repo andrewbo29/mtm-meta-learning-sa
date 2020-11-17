@@ -18,6 +18,7 @@ def get_benchmark_by_name(name,
                           num_ways,
                           num_shots,
                           num_shots_test,
+                          no_max_pool,
                           hidden_size=None):
     dataset_transform = ClassSplitter(shuffle=True,
                                       num_train_per_class=num_shots,
@@ -70,7 +71,7 @@ def get_benchmark_by_name(name,
                                      meta_test=True,
                                      dataset_transform=dataset_transform)
 
-        model = ModelConvOmniglot(num_ways, hidden_size=hidden_size)
+        model = ModelConvOmniglot(num_ways, no_max_pool, hidden_size=hidden_size)
         loss_function = F.cross_entropy
 
     elif name == 'miniimagenet':
@@ -96,7 +97,7 @@ def get_benchmark_by_name(name,
                                          meta_test=True,
                                          dataset_transform=dataset_transform)
 
-        model = ModelConvMiniImagenet(num_ways, hidden_size=hidden_size)
+        model = ModelConvMiniImagenet(num_ways, no_max_pool, hidden_size=hidden_size)
         loss_function = F.cross_entropy
 
     elif name == 'cifarfs':
@@ -122,7 +123,7 @@ def get_benchmark_by_name(name,
                                     meta_test=True,
                                     dataset_transform=dataset_transform)
 
-        model = ModelConvCifarFs(num_ways, hidden_size=hidden_size)
+        model = ModelConvCifarFs(num_ways, no_max_pool, hidden_size=hidden_size)
         loss_function = F.cross_entropy
 
     else:
