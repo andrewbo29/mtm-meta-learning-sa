@@ -145,7 +145,7 @@ if __name__ == '__main__':
     # Misc
     parser.add_argument('--num-workers', type=int, default=1,
                         help='Number of workers to use for data-loading (default: 1).')
-    parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--verbose', action='store_true', default=True)
     parser.add_argument('--use-cuda', action='store_true')
 
     args = parser.parse_args()

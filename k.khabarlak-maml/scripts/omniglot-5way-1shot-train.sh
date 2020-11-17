@@ -8,5 +8,4 @@ python ../src/train.py ../datasets/omniglot/ \
     --num-workers 8 \
     --num-epochs 600 \
     --use-cuda \
-    --verbose \
     --output-folder ../results
