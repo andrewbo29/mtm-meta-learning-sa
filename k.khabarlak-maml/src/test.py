@@ -1,7 +1,8 @@
 import torch
-import torch.nn.functional as F
 import os
 import json
+
+from os import path
 
 from torchmeta.utils.data import BatchMetaDataLoader
 
@@ -19,15 +20,18 @@ def main(args):
         config['num_steps'] = args.num_steps
     if args.num_batches > 0:
         config['num_batches'] = args.num_batches
-    device = torch.device('cuda' if args.use_cuda
-                                    and torch.cuda.is_available() else 'cpu')
+    config_dir = path.dirname(args.config)
+    config['folder'] = path.join(config_dir, config['folder'])
+    config['model_path'] = path.join(config_dir, config['model_path'])
+
+    device = torch.device('cuda' if args.use_cuda and torch.cuda.is_available() else 'cpu')
 
     benchmark = get_benchmark_by_name(config['dataset'],
                                       config['folder'],
                                       config['num_ways'],
                                       config['num_shots'],
                                       config['num_shots_test'],
-                                      config['use_max_pool'],
+                                      config['no_max_pool'],
                                       hidden_size=config['hidden_size'])
 
     with open(config['model_path'], 'rb') as f:

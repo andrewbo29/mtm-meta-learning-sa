@@ -5,6 +5,8 @@ import time
 import json
 import logging
 
+from os import path
+
 from torchmeta.utils.data import BatchMetaDataLoader
 
 from maml.datasets import get_benchmark_by_name
@@ -13,26 +15,28 @@ from maml.metalearners import ModelAgnosticMetaLearning
 
 def main(args):
     logging.basicConfig(level=logging.INFO if args.silent else logging.DEBUG)
-    device = torch.device('cuda' if args.use_cuda
-                                    and torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if args.use_cuda and torch.cuda.is_available() else 'cpu')
 
-    if (args.output_folder is not None):
-        if not os.path.exists(args.output_folder):
+    if args.output_folder is not None:
+        if not path.exists(args.output_folder):
             os.makedirs(args.output_folder)
             logging.debug('Creating folder `{0}`'.format(args.output_folder))
 
-        folder = os.path.join(args.output_folder,
-                              time.strftime('%Y-%m-%d_%H%M%S'))
+        folder = path.join(args.output_folder,
+                           time.strftime('%Y-%m-%d_%H%M%S'))
         os.makedirs(folder)
         logging.debug('Creating folder `{0}`'.format(folder))
 
-        args.folder = os.path.abspath(args.folder)
-        args.model_path = os.path.abspath(os.path.join(folder, 'model.th'))
+        args.folder = path.abspath(args.folder)
+        args.model_path = path.abspath(path.join(folder, 'model.th'))
         # Save the configuration in a config.json file
-        with open(os.path.join(folder, 'config.json'), 'w') as f:
-            json.dump(vars(args), f, indent=2)
+        with open(path.join(folder, 'config.json'), 'w') as f:
+            stored_args = argparse.Namespace(**vars(args))
+            stored_args.folder = path.relpath(stored_args.folder, folder)
+            stored_args.model_path = path.relpath(stored_args.model_path, folder)
+            json.dump(vars(stored_args), f, indent=2)
         logging.info('Saving configuration file in `{0}`'.format(
-            os.path.abspath(os.path.join(folder, 'config.json'))))
+            path.abspath(path.join(folder, 'config.json'))))
 
     benchmark = get_benchmark_by_name(args.dataset,
                                       args.folder,
@@ -52,7 +56,6 @@ def main(args):
                                               shuffle=True,
                                               num_workers=args.num_workers,
                                               pin_memory=True)
-
     meta_optimizer = torch.optim.Adam(benchmark.model.parameters(), lr=args.meta_lr)
     metalearner = ModelAgnosticMetaLearning(benchmark.model,
                                             meta_optimizer,
