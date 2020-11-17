@@ -168,8 +168,8 @@ class ModelAgnosticMetaLearning(object):
 
         return params, results
 
-    def train(self, dataloader, max_batches=500, verbose=True, **kwargs):
-        with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
+    def train(self, dataloader, max_batches=500, silent=False, **kwargs):
+        with tqdm(total=max_batches, disable=silent, **kwargs) as pbar:
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 postfix = {'loss': '{0:.4f}'.format(results['mean_outer_loss'])}
@@ -206,9 +206,9 @@ class ModelAgnosticMetaLearning(object):
 
                 num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=500, verbose=True, **kwargs):
+    def evaluate(self, dataloader, max_batches=500, silent=False, **kwargs):
         mean_outer_loss, mean_accuracy, count = 0., 0., 0
-        with tqdm(total=max_batches, disable=not verbose, **kwargs) as pbar:
+        with tqdm(total=max_batches, disable=silent, **kwargs) as pbar:
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 count += 1

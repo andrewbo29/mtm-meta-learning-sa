@@ -12,7 +12,7 @@ from maml.metalearners import ModelAgnosticMetaLearning
 
 
 def main(args):
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+    logging.basicConfig(level=logging.INFO if args.silent else logging.DEBUG)
     device = torch.device('cuda' if args.use_cuda
                                     and torch.cuda.is_available() else 'cpu')
 
@@ -69,12 +69,12 @@ def main(args):
     for epoch in range(args.num_epochs):
         metalearner.train(meta_train_dataloader,
                           max_batches=args.num_batches,
-                          verbose=args.verbose,
+                          silent=args.silent,
                           desc='Training',
                           leave=False)
         results = metalearner.evaluate(meta_val_dataloader,
                                        max_batches=args.num_batches,
-                                       verbose=args.verbose,
+                                       silent=args.silent,
                                        desc=epoch_desc.format(epoch + 1))
 
         # Save best model
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     # Misc
     parser.add_argument('--num-workers', type=int, default=1,
                         help='Number of workers to use for data-loading (default: 1).')
-    parser.add_argument('--verbose', action='store_true', default=True)
+    parser.add_argument('--silent', action='store_true', default=False)
     parser.add_argument('--use-cuda', action='store_true')
 
     args = parser.parse_args()
