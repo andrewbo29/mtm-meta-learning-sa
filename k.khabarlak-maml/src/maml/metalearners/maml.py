@@ -65,6 +65,7 @@ class ModelAgnosticMetaLearning(object):
            International Conference on Learning Representations (ICLR).
            (https://arxiv.org/abs/1810.09502)
     """
+
     def __init__(self, model, optimizer=None, step_size=0.1, first_order=False,
                  learn_step_size=False, per_param_step_size=False,
                  num_adaptation_steps=1, scheduler=None,
@@ -80,21 +81,21 @@ class ModelAgnosticMetaLearning(object):
 
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size,
-                dtype=param.dtype, device=self.device,
-                requires_grad=learn_step_size)) for (name, param)
-                in model.meta_named_parameters())
+                                                             dtype=param.dtype, device=self.device,
+                                                             requires_grad=learn_step_size)) for (name, param)
+                                         in model.meta_named_parameters())
         else:
             self.step_size = torch.tensor(step_size, dtype=torch.float32,
-                device=self.device, requires_grad=learn_step_size)
+                                          device=self.device, requires_grad=learn_step_size)
 
         if (self.optimizer is not None) and learn_step_size:
             self.optimizer.add_param_group({'params': self.step_size.values()
-                if per_param_step_size else [self.step_size]})
+            if per_param_step_size else [self.step_size]})
             if scheduler is not None:
                 for group in self.optimizer.param_groups:
                     group.setdefault('initial_lr', group['lr'])
                 self.scheduler.base_lrs([group['initial_lr']
-                    for group in self.optimizer.param_groups])
+                                         for group in self.optimizer.param_groups])
 
     def get_outer_loss(self, batch):
         if 'test' not in batch:
@@ -106,7 +107,7 @@ class ModelAgnosticMetaLearning(object):
         results = {
             'num_tasks': num_tasks,
             'inner_losses': np.zeros((self.num_adaptation_steps,
-                num_tasks), dtype=np.float32),
+                                      num_tasks), dtype=np.float32),
             'outer_losses': np.zeros((num_tasks,), dtype=np.float32),
             'mean_outer_loss': 0.
         }
@@ -120,9 +121,9 @@ class ModelAgnosticMetaLearning(object):
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
             params, adaptation_results = self.adapt(train_inputs, train_targets,
-                is_classification_task=is_classification_task,
-                num_adaptation_steps=self.num_adaptation_steps,
-                step_size=self.step_size, first_order=self.first_order)
+                                                    is_classification_task=is_classification_task,
+                                                    num_adaptation_steps=self.num_adaptation_steps,
+                                                    step_size=self.step_size, first_order=self.first_order)
 
             results['inner_losses'][:, task_id] = adaptation_results['inner_losses']
             if is_classification_task:
@@ -162,8 +163,8 @@ class ModelAgnosticMetaLearning(object):
 
             self.model.zero_grad()
             params = gradient_update_parameters(self.model, inner_loss,
-                step_size=step_size, params=params,
-                first_order=(not self.model.training) or first_order)
+                                                step_size=step_size, params=params,
+                                                first_order=(not self.model.training) or first_order)
 
         return params, results
 
@@ -180,10 +181,10 @@ class ModelAgnosticMetaLearning(object):
     def train_iter(self, dataloader, max_batches=500):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
-                'optimizer is `None`. In order to train `{0}`, you must '
-                'specify a Pytorch optimizer as the argument of `{0}` '
-                '(eg. `{0}(model, optimizer=torch.optim.SGD(model.'
-                'parameters(), lr=0.01), ...).'.format(__class__.__name__))
+                               'optimizer is `None`. In order to train `{0}`, you must '
+                               'specify a Pytorch optimizer as the argument of `{0}` '
+                               '(eg. `{0}(model, optimizer=torch.optim.SGD(model.'
+                               'parameters(), lr=0.01), ...).'.format(__class__.__name__))
         num_batches = 0
         self.model.train()
         while num_batches < max_batches:
@@ -212,11 +213,11 @@ class ModelAgnosticMetaLearning(object):
                 pbar.update(1)
                 count += 1
                 mean_outer_loss += (results['mean_outer_loss']
-                    - mean_outer_loss) / count
+                                    - mean_outer_loss) / count
                 postfix = {'loss': '{0:.4f}'.format(mean_outer_loss)}
                 if 'accuracies_after' in results:
                     mean_accuracy += (np.mean(results['accuracies_after'])
-                        - mean_accuracy) / count
+                                      - mean_accuracy) / count
                     postfix['accuracy'] = '{0:.4f}'.format(mean_accuracy)
                 pbar.set_postfix(**postfix)
 
@@ -240,7 +241,9 @@ class ModelAgnosticMetaLearning(object):
 
                 num_batches += 1
 
+
 MAML = ModelAgnosticMetaLearning
+
 
 class FOMAML(ModelAgnosticMetaLearning):
     def __init__(self, model, optimizer=None, step_size=0.1,
@@ -248,7 +251,7 @@ class FOMAML(ModelAgnosticMetaLearning):
                  num_adaptation_steps=1, scheduler=None,
                  loss_function=F.cross_entropy, device=None):
         super(FOMAML, self).__init__(model, optimizer=optimizer, first_order=True,
-            step_size=step_size, learn_step_size=learn_step_size,
-            per_param_step_size=per_param_step_size,
-            num_adaptation_steps=num_adaptation_steps, scheduler=scheduler,
-            loss_function=loss_function, device=device)
+                                     step_size=step_size, learn_step_size=learn_step_size,
+                                     per_param_step_size=per_param_step_size,
+                                     num_adaptation_steps=num_adaptation_steps, scheduler=scheduler,
+                                     loss_function=loss_function, device=device)

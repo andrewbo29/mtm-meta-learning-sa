@@ -12,6 +12,7 @@ from maml.utils import ToTensor1D
 Benchmark = namedtuple('Benchmark', 'meta_train_dataset meta_val_dataset '
                                     'meta_test_dataset model loss_function')
 
+
 def get_benchmark_by_name(name,
                           folder,
                           num_ways,
@@ -102,24 +103,24 @@ def get_benchmark_by_name(name,
         transform = Compose([Resize(32), ToTensor()])
 
         meta_train_dataset = CIFARFS(folder,
-                                          transform=transform,
-                                          target_transform=Categorical(num_ways),
-                                          num_classes_per_task=num_ways,
-                                          meta_train=True,
-                                          dataset_transform=dataset_transform,
-                                          download=True)
+                                     transform=transform,
+                                     target_transform=Categorical(num_ways),
+                                     num_classes_per_task=num_ways,
+                                     meta_train=True,
+                                     dataset_transform=dataset_transform,
+                                     download=True)
         meta_val_dataset = CIFARFS(folder,
-                                        transform=transform,
-                                        target_transform=Categorical(num_ways),
-                                        num_classes_per_task=num_ways,
-                                        meta_val=True,
-                                        dataset_transform=dataset_transform)
+                                   transform=transform,
+                                   target_transform=Categorical(num_ways),
+                                   num_classes_per_task=num_ways,
+                                   meta_val=True,
+                                   dataset_transform=dataset_transform)
         meta_test_dataset = CIFARFS(folder,
-                                         transform=transform,
-                                         target_transform=Categorical(num_ways),
-                                         num_classes_per_task=num_ways,
-                                         meta_test=True,
-                                         dataset_transform=dataset_transform)
+                                    transform=transform,
+                                    target_transform=Categorical(num_ways),
+                                    num_classes_per_task=num_ways,
+                                    meta_test=True,
+                                    dataset_transform=dataset_transform)
 
         model = ModelConvCifarFs(num_ways, hidden_size=hidden_size)
         loss_function = F.cross_entropy
