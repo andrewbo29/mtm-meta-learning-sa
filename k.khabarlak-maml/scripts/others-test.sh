@@ -1,3 +1,3 @@
 # $1 is path to train config.json
 
-python ../src/test.py $1
+python ../src/test.py $1 --use-cuda
