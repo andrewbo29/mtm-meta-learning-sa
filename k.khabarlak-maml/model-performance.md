@@ -16,7 +16,7 @@ Accuracy metrics for most common few-shot datasets:
 | Model                          | 1-shot 2-way | 5-shot 2-way | 1-shot 5-way | 5-shot 5-way |
 | ------------------------------ | ------------ | ------------ | ------------ | ------------ |
 | MAML (as desc in <sup>3</sup>) | 82.8%        | 88.3%        | 58.9%        | 71.5%        |
-| MAML (reproduced)              |              |              |              |              |
+| MAML (reproduced)              | 77.0%        |              |              |              |
 <br/> <br/>
 
 ## MiniImageNet
