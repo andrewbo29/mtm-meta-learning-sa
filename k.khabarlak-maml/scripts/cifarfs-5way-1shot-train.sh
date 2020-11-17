@@ -1,4 +1,5 @@
 python ../src/train.py ../datasets/ \
+    --run-name 07-cifarfs-5way-1shot \
     --dataset cifarfs \
     --num-ways 5 \
     --num-shots 1 \

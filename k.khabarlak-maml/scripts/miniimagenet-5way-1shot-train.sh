@@ -1,4 +1,5 @@
 python ../src/train.py ../datasets/ \
+    --run-name 11-miniimagenet-5way-1shot \
     --dataset miniimagenet \
     --num-ways 5 \
     --num-shots 1 \

@@ -1,4 +1,5 @@
 python ../src/train.py ../datasets/omniglot/ \
+    --run-name 04-omniglot-20way-5shot \
     --dataset omniglot \
     --num-ways 20 \
     --num-shots 5 \

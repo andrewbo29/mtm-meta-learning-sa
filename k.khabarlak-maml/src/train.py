@@ -22,9 +22,11 @@ def main(args):
             os.makedirs(args.output_folder)
             logging.debug('Creating folder `{0}`'.format(args.output_folder))
 
-        folder = path.join(args.output_folder,
-                           time.strftime('%Y-%m-%d_%H%M%S'))
-        os.makedirs(folder)
+        if args.run_name is None:
+            args.run_name = time.strftime('%Y-%m-%d_%H%M%S')
+
+        folder = path.join(args.output_folder, args.run_name)
+        os.makedirs(folder, exist_ok=False)
         logging.debug('Creating folder `{0}`'.format(folder))
 
         args.folder = path.abspath(args.folder)
@@ -151,6 +153,7 @@ if __name__ == '__main__':
                              'loss). The default optimizer is Adam (default: 1e-3).')
 
     # Misc
+    parser.add_argument('--run-name', type=str, default=None, help='Custom name for run results')
     parser.add_argument('--num-workers', type=int, default=1,
                         help='Number of workers to use for data-loading (default: 1).')
     parser.add_argument('--silent', action='store_true', default=False)
