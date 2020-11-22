@@ -18,6 +18,12 @@ Accuracy metrics for most common few-shot datasets:
 
 <br/> <br/>
 
+## FewShot-Cifar100 <sup>3</sup>
+
+| Model             | 1-shot 5-way      | 5-shot 5-way       | 10-shot 5-way      |
+| ----------------- | ----------------- | ------------------ | ------------------ |
+| MAML (reproduced) | 35.1%             | 47.2%              | 51.3%              |
+
 ## MiniImageNet
 
 
@@ -36,3 +42,4 @@ Accuracy metrics for most common few-shot datasets:
 
 <sup>1</sup> Batch sizes have been decreased to reduce GPU memory usage. See scripts for exact configuration  
 <sup>2</sup> Preliminary results
+<sup>3</sup> Original model hasn't been tested previously in literature on FewShot-Cifar100
