@@ -128,8 +128,8 @@ if __name__ == '__main__':
     parser.add_argument('--hidden-size', type=int, default=64,
                         help='Number of channels in each convolution layer of the network '
                              '(default: 64).')
-    # Should be True for cifarfs and miniimagenet, False for omniglot
-    parser.add_argument('--no-max-pool', action='store_false', default=True,
+    # Should be False for cifarfs and miniimagenet, True for omniglot
+    parser.add_argument('--no-max-pool', action='store_true', default=False,
                         help='True to use strided conv model, False to use MaxPooled model')
 
     # Optimization
