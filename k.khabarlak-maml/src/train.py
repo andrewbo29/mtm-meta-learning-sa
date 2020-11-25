@@ -73,6 +73,7 @@ def main(args):
     epoch_desc = 'Epoch {{0: <{0}d}}'.format(1 + int(math.log10(args.num_epochs)))
     for epoch in range(args.num_epochs):
         metalearner.train(meta_train_dataloader,
+                          epoch,
                           max_batches=args.num_batches,
                           silent=args.silent,
                           desc='Training',
@@ -151,6 +152,10 @@ if __name__ == '__main__':
     parser.add_argument('--meta-lr', type=float, default=0.001,
                         help='Learning rate for the meta-optimizer (optimization of the outer '
                              'loss). The default optimizer is Adam (default: 1e-3).')
+
+    # SPSA
+    parser.add_argument('--enable-spsa', action='store_true',
+                        help='Enabled spsa-based weight multitasking')
 
     # Misc
     parser.add_argument('--run-name', type=str, default=None, help='Custom name for run results')

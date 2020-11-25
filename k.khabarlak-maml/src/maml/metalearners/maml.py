@@ -1,16 +1,18 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
+
 from tqdm import tqdm
 
 from collections import OrderedDict
 from torchmeta.utils import gradient_update_parameters
 from maml.utils import tensors_to_device, compute_accuracy
+from spsa import multiclass_weights_optimize
 
 __all__ = ['ModelAgnosticMetaLearning', 'MAML', 'FOMAML']
 
 
-class ModelAgnosticMetaLearning(object):
+class ModelAgnosticMetaLearning:
     """Meta-learner class for Model-Agnostic Meta-Learning [1].
 
     Parameters
@@ -97,7 +99,7 @@ class ModelAgnosticMetaLearning(object):
                 self.scheduler.base_lrs([group['initial_lr']
                                          for group in self.optimizer.param_groups])
 
-    def get_outer_loss(self, batch):
+    def get_outer_losses(self, batch) -> (torch.Tensor, dict):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
@@ -117,7 +119,7 @@ class ModelAgnosticMetaLearning(object):
                 'accuracies_after': np.zeros((num_tasks,), dtype=np.float32)
             })
 
-        mean_outer_loss = torch.tensor(0., device=self.device)
+        outer_losses = torch.zeros(len(batch['train'][0]), device=self.device)
         for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
                 in enumerate(zip(*batch['train'], *batch['test'])):
             params, adaptation_results = self.adapt(train_inputs, train_targets,
@@ -133,16 +135,15 @@ class ModelAgnosticMetaLearning(object):
                 test_logits = self.model(test_inputs, params=params)
                 outer_loss = self.loss_function(test_logits, test_targets)
                 results['outer_losses'][task_id] = outer_loss.item()
-                mean_outer_loss += outer_loss
+                outer_losses[task_id] = outer_loss
 
             if is_classification_task:
                 results['accuracies_after'][task_id] = compute_accuracy(
                     test_logits, test_targets)
 
-        mean_outer_loss.div_(num_tasks)
-        results['mean_outer_loss'] = mean_outer_loss.item()
+        results['mean_outer_loss'] = outer_losses.mean().item()
 
-        return mean_outer_loss, results
+        return outer_losses, results
 
     def adapt(self, inputs, targets, is_classification_task=None,
               num_adaptation_steps=1, step_size=0.1, first_order=False):
@@ -168,9 +169,9 @@ class ModelAgnosticMetaLearning(object):
 
         return params, results
 
-    def train(self, dataloader, max_batches=500, silent=False, **kwargs):
+    def train(self, dataloader, epoch, max_batches=500, silent=False, **kwargs):
         with tqdm(total=max_batches, disable=silent, **kwargs) as pbar:
-            for results in self.train_iter(dataloader, max_batches=max_batches):
+            for results in self.train_iter(dataloader, epoch, max_batches=max_batches):
                 pbar.update(1)
                 postfix = {'loss': '{0:.4f}'.format(results['mean_outer_loss'])}
                 if 'accuracies_after' in results:
@@ -178,7 +179,7 @@ class ModelAgnosticMetaLearning(object):
                         np.mean(results['accuracies_after']))
                 pbar.set_postfix(**postfix)
 
-    def train_iter(self, dataloader, max_batches=500):
+    def train_iter(self, dataloader, epoch, max_batches):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
                                'optimizer is `None`. In order to train `{0}`, you must '
@@ -187,6 +188,10 @@ class ModelAgnosticMetaLearning(object):
                                'parameters(), lr=0.01), ...).'.format(__class__.__name__))
         num_batches = 0
         self.model.train()
+        num_tasks_in_batch = dataloader.batch_size
+        task_weights = np.array(
+            [1. / num_tasks_in_batch for _ in range(num_tasks_in_batch)], dtype=np.float32)
+
         while num_batches < max_batches:
             for batch in dataloader:
                 if num_batches >= max_batches:
@@ -198,11 +203,18 @@ class ModelAgnosticMetaLearning(object):
                 self.optimizer.zero_grad()
 
                 batch = tensors_to_device(batch, device=self.device)
-                outer_loss, results = self.get_outer_loss(batch)
+                outer_losses, results = self.get_outer_losses(batch)
                 yield results
 
-                outer_loss.backward()
+                loss = multiclass_weights_optimize.compute_mean_weighted_loss(task_weights, outer_losses, self.device)
+
+                loss.backward()
                 self.optimizer.step()
+
+                iteration_num = epoch * max_batches + num_batches
+                if iteration_num > 0:
+                    task_weights = multiclass_weights_optimize \
+                        .optimize_grad_all_loss(task_weights, iteration_num, self, batch, self.device, self.optimizer)
 
                 num_batches += 1
 
@@ -236,7 +248,7 @@ class ModelAgnosticMetaLearning(object):
                     break
 
                 batch = tensors_to_device(batch, device=self.device)
-                _, results = self.get_outer_loss(batch)
+                _, results = self.get_outer_losses(batch)
                 yield results
 
                 num_batches += 1

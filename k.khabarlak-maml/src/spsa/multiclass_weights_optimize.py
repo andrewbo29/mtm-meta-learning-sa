@@ -58,63 +58,49 @@ def optimize(weights, losses, iteration_num):
     return weights_update
 
 
-def update_params_all_loss(net, weights, batches, loss_fn, device, opt, iteration_num):
+def compute_mean_weighted_loss(weights, losses, device):
+    weights = torch.from_numpy(weights).to(device)
+    mul = 1. / (weights ** 2)
+    add = torch.log(weights ** 2)
+    return (losses.dot(mul) + add).mean()
+
+
+def update_params_all_loss(net, weights, batch, device, opt, iteration_num):
     # lr = 0.001
     lr = 0.01
 
-    # epoch_num = iteration_num // opt.iterations
-    # step_ep = 10
-    # lr = 0.001 * 1 / 10 ** (epoch_num // step_ep)
+    optim = torch.optim.SGD(params=net.model.parameters(), lr=lr)
 
-    # optim = torch.optim.Adam(params=net.parameters(), lr=0.001)
-    optim = torch.optim.SGD(params=net.parameters(), lr=lr, weight_decay=opt.weight_decay)
+    net.model.to(device)
+    net.model.train()
 
-    net.to(device)
-    net.train()
+    outer_losses, _ = net.get_outer_losses(batch)
+    loss = compute_mean_weighted_loss(weights, outer_losses, device)
 
-    losses = []
-    for batch in batches:
-        x, y = batch
-        x, y = x.to(device), y.to(device)
-
-        net_output = net(x)
-        loss, _, __ = loss_fn(net_output, target=y, n_support=opt.num_support_tr, args=opt, is_test=False)
-        losses.append(loss)
-
-    loss_all = 0
-    for j, loss_val in enumerate(losses):
-        loss_all += 1 / (float(weights[j]) ** 2) * loss_val + np.log(weights[j] ** 2)
-
-    loss_all.backward()
+    loss.backward()
     optim.step()
 
-    losses = []
-    for batch in batches:
-        x, y = batch
-        x, y = x.to(device), y.to(device)
-        net_output = net(x)
-        loss, _, __ = loss_fn(net_output, target=y, n_support=opt.num_support_tr, args=opt, is_test=False)
-        losses.append(loss)
-
-    return y_loss(weights, losses)
+    outer_losses, _ = net.get_outer_losses(batch)
+    return compute_mean_weighted_loss(weights, outer_losses, device)
 
 
-def optimize_grad_all_loss(weights, iteration_num, net, batches, loss_fn, device, opt):
+def optimize_grad_all_loss(weights, iteration_num, net, batch, device, opt):
     delta_n = delta_fabric(len(weights))
     alpha_n = alpha_fabric(iteration_num)
     beta_n = beta_fabric(iteration_num)
 
     net_plus = copy.deepcopy(net)
-    weights_plus = [weights[i] + beta_n * delta_n[i] for i in range(len(weights))]
-    y_plus = update_params_all_loss(net_plus, weights_plus, batches, loss_fn, device, opt, iteration_num)
+    weights_plus = (weights + beta_n * delta_n).astype(np.float32)
+    y_plus = update_params_all_loss(net_plus, weights_plus, batch, device, opt, iteration_num)
 
     net_minus = copy.deepcopy(net)
-    weights_minus = [weights[i] - beta_n * delta_n[i] for i in range(len(weights))]
-    y_minus = update_params_all_loss(net_minus, weights_minus, batches, loss_fn, device, opt, iteration_num)
+    weights_minus = (weights - beta_n * delta_n).astype(np.float32)
+    y_minus = update_params_all_loss(net_minus, weights_minus, batch, device, opt, iteration_num)
 
-    weights_update = weights - alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
+    difference = (y_plus - y_minus).detach().cpu().numpy()
+    weights_update = weights - alpha_n * np.multiply(delta_n, difference / (2 * beta_n))
 
-    return weights_update
+    return weights_update.astype(np.float32)
 
 
 def update_params_one_loss(net, weights, batches, loss_fn, device, opt, iteration_num):
