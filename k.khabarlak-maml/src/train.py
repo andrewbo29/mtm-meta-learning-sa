@@ -112,7 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('folder', type=str,
                         help='Path to the folder the data is downloaded to.')
     parser.add_argument('--dataset', type=str,
-                        choices=['sinusoid', 'omniglot', 'miniimagenet', 'cifarfs'], default='omniglot',
+                        choices=['sinusoid', 'omniglot', 'miniimagenet', 'cifarfs', 'fc100'], default='omniglot',
                         help='Name of the dataset (default: omniglot).')
     parser.add_argument('--output-folder', type=str, default=None,
                         help='Path to the output folder to save the model.')
