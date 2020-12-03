@@ -15,6 +15,7 @@ Accuracy metrics for most common few-shot datasets:
 | --------------------- | ----------------- | ----------------- | ------------ | ----------------- |
 | MAML (as desc in [2]) | 82.8%             | 88.3%             | 58.9%        | 71.5%             |
 | MAML (reproduced)     | 75.0%             | 87.4%             | 54.9%        | 70.1%             |
+| MAML (spsa-delta)     | 73.0%             | 84.3%             | 54.8%        | 79.1%<sup>2</sup> |
 
 <br/> <br/>
 
