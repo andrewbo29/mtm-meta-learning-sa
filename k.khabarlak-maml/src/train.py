@@ -68,6 +68,10 @@ def main(args):
                                             loss_function=benchmark.loss_function,
                                             device=device)
 
+    if args.load is not None:
+        with open(args.load, 'rb') as f:
+            benchmark.model.load_state_dict(torch.load(f, map_location=device))
+
     best_value = None
     if args.task_weighting == 'none':
         task_weighting = weighting.TaskWeightingNone(device)
@@ -122,6 +126,8 @@ if __name__ == '__main__':
     # General
     parser.add_argument('folder', type=str,
                         help='Path to the folder the data is downloaded to.')
+    parser.add_argument('--load', type=str, default=None,
+                        help='Finetune already trained model')
     parser.add_argument('--dataset', type=str,
                         choices=['sinusoid', 'omniglot', 'miniimagenet', 'cifarfs', 'fc100'], default='omniglot',
                         help='Name of the dataset (default: omniglot).')
