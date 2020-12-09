@@ -73,3 +73,29 @@ class SpsaWeightingDelta(TaskWeightingBase):
             .detach().cpu().numpy()
 
         self.weights -= alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
+
+
+class SinWeighting(TaskWeightingBase):
+    def __init__(self, num_tasks_in_batch, device):
+        super().__init__(device)
+
+        self.iteration = None
+        self.num_tasks_in_batch = num_tasks_in_batch
+
+    def _get_weight(self, iteration, idx):
+        return np.sin(iteration * np.pi / 2.0
+                      + idx * np.pi / self.num_tasks_in_batch
+                      + np.pi / (2 * self.num_tasks_in_batch)) + 0.9
+
+    def before_gradient_step(self, iteration):
+        self.iteration = iteration
+        self.weights = torch.FloatTensor([self._get_weight(iteration, idx) for idx in range(self.num_tasks_in_batch)]) \
+            .to(self.device)
+
+    def compute_weighted_loss(self, iteration, losses: torch.Tensor):
+        self.weights = torch.FloatTensor([self._get_weight(iteration, idx) for idx in range(self.num_tasks_in_batch)]) \
+            .to(self.device)
+        return (losses * self.weights).mean()
+
+    def after_gradient_step(self, iteration, losses):
+        pass

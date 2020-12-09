@@ -73,6 +73,8 @@ def main(args):
         task_weighting = weighting.TaskWeightingNone(device)
     elif args.task_weighting == 'spsa-delta':
         task_weighting = weighting.SpsaWeightingDelta(args.batch_size, device)
+    elif args.task_weighting == 'sin':
+        task_weighting = weighting.SinWeighting(args.batch_size, device)
     else:
         raise ValueError(f'Unknown weighting value: {args.task_weighting}')
 
@@ -164,7 +166,7 @@ if __name__ == '__main__':
 
     # SPSA
     parser.add_argument('--task-weighting', type=str,
-                        choices=['none', 'spsa-delta'], default='none',
+                        choices=['none', 'spsa-delta', 'sin'], default='none',
                         help='Type of multi-tasking weighting')
 
     # Misc
