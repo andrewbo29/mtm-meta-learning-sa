@@ -7,7 +7,7 @@ from tqdm import tqdm
 from collections import OrderedDict
 from torchmeta.utils import gradient_update_parameters
 from maml.utils import tensors_to_device, compute_accuracy
-from spsa import multiclass_weights_optimize
+from spsa.multiclass_weights_optimize import TaskWeightingBase
 
 __all__ = ['ModelAgnosticMetaLearning', 'MAML', 'FOMAML']
 
@@ -169,17 +169,17 @@ class ModelAgnosticMetaLearning:
 
         return params, results
 
-    def train(self, dataloader, epoch, max_batches=500, silent=False, **kwargs):
-        with tqdm(total=max_batches, disable=silent, **kwargs) as pbar:
-            for results in self.train_iter(dataloader, epoch, max_batches=max_batches):
-                pbar.update(1)
-                postfix = {'loss': '{0:.4f}'.format(results['mean_outer_loss'])}
+    def train(self, dataloader, task_weighting, epoch, max_batches=500, silent=False, **kwargs):
+        iter = self.train_iter(dataloader, task_weighting, epoch, max_batches=max_batches)
+        with tqdm(iter, total=max_batches, disable=silent, **kwargs) as pbar:
+            for results in pbar:
+                postfix = {'loss': f"{results['mean_outer_loss']:.4f}"}
                 if 'accuracies_after' in results:
-                    postfix['accuracy'] = '{0:.4f}'.format(
-                        np.mean(results['accuracies_after']))
+                    postfix['accuracy'] = f"{np.mean(results['accuracies_after']):.4f}"
                 pbar.set_postfix(**postfix)
 
-    def train_iter(self, dataloader, epoch, max_batches):
+    def train_iter(self, dataloader, task_weighting: TaskWeightingBase,
+                   epoch, max_batches):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
                                'optimizer is `None`. In order to train `{0}`, you must '
@@ -188,9 +188,6 @@ class ModelAgnosticMetaLearning:
                                'parameters(), lr=0.01), ...).'.format(__class__.__name__))
         num_batches = 0
         self.model.train()
-        num_tasks_in_batch = dataloader.batch_size
-        task_weights = np.array(
-            [1. / num_tasks_in_batch for _ in range(num_tasks_in_batch)], dtype=np.float32)
 
         while num_batches < max_batches:
             for batch in dataloader:
@@ -200,29 +197,28 @@ class ModelAgnosticMetaLearning:
                 if self.scheduler is not None:
                     self.scheduler.step(epoch=num_batches)
 
+                iteration = epoch * max_batches + num_batches
+
                 self.optimizer.zero_grad()
 
                 batch = tensors_to_device(batch, device=self.device)
                 outer_losses, results = self.get_outer_losses(batch)
                 yield results
 
-                loss = multiclass_weights_optimize.compute_mean_weighted_loss(task_weights, outer_losses, self.device)
+                loss = task_weighting.compute_weighted_loss(iteration, outer_losses)
 
                 loss.backward()
                 self.optimizer.step()
 
-                iteration_num = epoch * max_batches + num_batches
-                if iteration_num > 0:
-                    task_weights = multiclass_weights_optimize \
-                        .optimize_grad_all_loss(task_weights, iteration_num, self, batch, self.device, self.optimizer)
+                task_weighting.after_gradient_step(iteration, outer_losses)
 
                 num_batches += 1
 
-    def evaluate(self, dataloader, max_batches=500, silent=False, **kwargs):
+    def evaluate(self, dataloader, max_batches, silent=False, **kwargs):
         mean_outer_loss, mean_accuracy, count = 0., 0., 0
-        with tqdm(total=max_batches, disable=silent, **kwargs) as pbar:
-            for results in self.evaluate_iter(dataloader, max_batches=max_batches):
-                pbar.update(1)
+        iter = self.evaluate_iter(dataloader, max_batches=max_batches)
+        with tqdm(iter, total=max_batches, disable=silent, **kwargs) as pbar:
+            for results in pbar:
                 count += 1
                 mean_outer_loss += (results['mean_outer_loss']
                                     - mean_outer_loss) / count

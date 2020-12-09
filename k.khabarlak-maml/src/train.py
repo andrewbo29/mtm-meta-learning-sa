@@ -5,6 +5,8 @@ import time
 import json
 import logging
 
+import spsa.multiclass_weights_optimize as weighting
+
 from os import path
 
 from torchmeta.utils.data import BatchMetaDataLoader
@@ -17,28 +19,27 @@ def main(args):
     logging.basicConfig(level=logging.INFO if args.silent else logging.DEBUG)
     device = torch.device('cuda' if args.use_cuda and torch.cuda.is_available() else 'cpu')
 
-    if args.output_folder is not None:
-        if not path.exists(args.output_folder):
-            os.makedirs(args.output_folder)
-            logging.debug('Creating folder `{0}`'.format(args.output_folder))
+    if not path.exists(args.output_folder):
+        os.makedirs(args.output_folder)
+        logging.debug('Creating folder `{0}`'.format(args.output_folder))
 
-        if args.run_name is None:
-            args.run_name = time.strftime('%Y-%m-%d_%H%M%S')
+    if args.run_name is None:
+        args.run_name = time.strftime('%Y-%m-%d_%H%M%S')
 
-        folder = path.join(args.output_folder, args.run_name)
-        os.makedirs(folder, exist_ok=False)
-        logging.debug('Creating folder `{0}`'.format(folder))
+    folder = path.join(args.output_folder, args.run_name)
+    os.makedirs(folder, exist_ok=False)
+    logging.debug('Creating folder `{0}`'.format(folder))
 
-        args.folder = path.abspath(args.folder)
-        args.model_path = path.abspath(path.join(folder, 'model.th'))
-        # Save the configuration in a config.json file
-        with open(path.join(folder, 'config.json'), 'w') as f:
-            stored_args = argparse.Namespace(**vars(args))
-            stored_args.folder = path.relpath(stored_args.folder, folder)
-            stored_args.model_path = path.relpath(stored_args.model_path, folder)
-            json.dump(vars(stored_args), f, indent=2)
-        logging.info('Saving configuration file in `{0}`'.format(
-            path.abspath(path.join(folder, 'config.json'))))
+    args.folder = path.abspath(args.folder)
+    args.model_path = path.abspath(path.join(folder, 'model.th'))
+    # Save the configuration in a config.json file
+    with open(path.join(folder, 'config.json'), 'w') as f:
+        stored_args = argparse.Namespace(**vars(args))
+        stored_args.folder = path.relpath(stored_args.folder, folder)
+        stored_args.model_path = path.relpath(stored_args.model_path, folder)
+        json.dump(vars(stored_args), f, indent=2)
+    logging.info('Saving configuration file in `{0}`'.format(
+        path.abspath(path.join(folder, 'config.json'))))
 
     benchmark = get_benchmark_by_name(args.dataset,
                                       args.folder,
@@ -68,11 +69,19 @@ def main(args):
                                             device=device)
 
     best_value = None
+    if args.task_weighting == 'none':
+        task_weighting = weighting.TaskWeightingNone(device)
+    elif args.task_weighting == 'spsa-delta':
+        task_weighting = weighting.SpsaWeightingDelta(args.batch_size, device)
+    else:
+        raise ValueError(f'Unknown weighting value: {args.task_weighting}')
 
     # Training loop
     epoch_desc = 'Epoch {{0: <{0}d}}'.format(1 + int(math.log10(args.num_epochs)))
+
     for epoch in range(args.num_epochs):
         metalearner.train(meta_train_dataloader,
+                          task_weighting,
                           epoch,
                           max_batches=args.num_batches,
                           silent=args.silent,
@@ -154,8 +163,9 @@ if __name__ == '__main__':
                              'loss). The default optimizer is Adam (default: 1e-3).')
 
     # SPSA
-    parser.add_argument('--enable-spsa', action='store_true',
-                        help='Enabled spsa-based weight multitasking')
+    parser.add_argument('--task-weighting', type=str,
+                        choices=['none', 'spsa-delta'], default='none',
+                        help='Type of multi-tasking weighting')
 
     # Misc
     parser.add_argument('--run-name', type=str, default=None, help='Custom name for run results')
