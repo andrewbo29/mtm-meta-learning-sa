@@ -279,6 +279,8 @@ if __name__ == '__main__':
                             help='number of task runs before update')
     parser.add_argument('--pretrain', type=int, default=20,
                             help='number of task runs before update')
+    parser.add_argument('--sin-stage', type=int, default=10,
+                            help='number of task runs before update')
 
     opt = parser.parse_args()
     
@@ -305,7 +307,11 @@ if __name__ == '__main__':
     timer = Timer()
     x_entropy = torch.nn.CrossEntropyLoss()
     
-    weights = np.array([1 / opt.task_number for _ in range(opt.task_number)])
+    weights0 = np.array([1 / opt.task_number for _ in range(opt.task_number)])
+    weights1 = np.array([np.sin(i * np.pi / opt.task_number + np.pi / (2 * opt.task_number)) + 0.9 for i in range(1, opt.task_number + 1)])
+    weights1 = weights1 / weights1.sum()
+    assert weights0.shape == weights1.shape
+    weights = np.ones_like(weights0)
     i_cum = 0
     
     for epoch in range(1, opt.num_epoch + 1):
@@ -324,11 +330,18 @@ if __name__ == '__main__':
         _, _ = [x.train() for x in (embedding_net, cls_head)]
         
         train_accuracies = []
-        train_losses = []
+        train_losses = []        
 
         with tqdm(dataloader_train, total = opt.train_episode, initial = 1) as pbar:
-          pretrain_counter = 0
+          if epoch > opt.pretrain + opt.sin_stage:
+            if opt.sin_stage > 0:
+              weights = weights1
+            else:
+              weights = weights0
           for i, batch in enumerate(pbar, 1):
+            if (epoch > opt.pretrain) & (epoch <+ opt.pretrain + opt.sin_stage):
+              weight = np.sin(i * np.pi / opt.task_number + np.pi / (2 * opt.task_number)) + 0.9
+              weights[(i - 1) % opt.task_number] = weight
             data_support, labels_support = batch["train"]
             data_query, labels_query = batch["test"]
             data_support = data_support.to(device='cuda')
@@ -360,12 +373,20 @@ if __name__ == '__main__':
             acc_all.append(acc)
             
             loss_all = 0
-            if (opt.task_number == 1) or (pretrain_counter < opt.pretrain):
+            if (opt.task_number == 1) or (epoch <= opt.pretrain):
                 loss_all = loss
-            elif (i % opt.task_number == 0):                
+            elif (i % opt.task_number == 0):
+                if epoch <= opt.pretrain + opt.sin_stage:
+                  weights = weights / np.sum(weights)             
                 for j, loss_val in enumerate(losses_all):
+                  if epoch <= opt.pretrain + opt.sin_stage:
+                    loss_all += weights[j] * loss_val
+                  else:
                     loss_all += (1 / (weights[j] ** 2) * loss_val + np.log(weights[j] ** 2))
-                weights = optimize(weights, losses_all, i_cum + i / opt.task_number)
+                if epoch > opt.pretrain + opt.sin_stage:
+                  weights = optimize(weights, losses_all, i_cum + i / opt.task_number)
+                  weights = weights / np.sum(weights)
+                
             if loss_all != 0:
                 train_losses.append(loss_all.item() / len(losses_all))
                 train_accuracies.append(np.mean([acc.item() for acc in acc_all]))                
@@ -375,15 +396,14 @@ if __name__ == '__main__':
                 losses_all = []
                 acc_all = []
 
-            if (i % (opt.train_episode / 10) == 0):
+            if (i % (opt.train_episode // 10) == 0):
                 train_acc_avg = np.mean(np.array(train_accuracies))
                 log(log_file_path, 'Train Epoch: {}\tBatch: [{}/{}]\tLoss: {:.4f}\tAccuracy: {:.2f} % ({:.2f} %)'.format(
                             epoch, i, opt.train_episode, train_losses[-1], train_acc_avg, train_accuracies[-1]))            
             
             if i == opt.train_episode:
-                pretrain_counter += 1
-                if pretrain_counter >= opt.pretrain:
-                    i_cum += i / opt.task_number
+                if epoch > opt.pretrain + opt.sin_stage:
+                    i_cum += i // opt.task_number
                 break
 
         lr_scheduler.step()
