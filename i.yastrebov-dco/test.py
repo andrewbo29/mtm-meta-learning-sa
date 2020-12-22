@@ -30,14 +30,16 @@ def get_model(options):
     # Choose the classification head
     if options.head == 'Ridge':
         cls_head = ClassificationHead(base_learner='Ridge').cuda()
+    elif options.head == 'Proto':
+        cls_head = ClassificationHead(base_learner='Proto').cuda()
     elif options.head == 'SVM-CS':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
     elif options.head == 'SVM-He':
-        cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
+        cls_head = ClassificationHead(base_learner='SVM-He').cuda()
     elif options.head == 'SVM-WW':
-        cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
+        cls_head = ClassificationHead(base_learner='SVM-WW').cuda()
     else:
-        print ("Cannot recognize the dataset type")
+        print ("Cannot recognize the base learner type")
         assert(False)
         
     return (network, cls_head)
