@@ -9,8 +9,8 @@ from itertools import combinations
 from models.classification_heads import ClassificationHead
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
-from optimize1 import optimize
-from optimize1 import optimize_weights_track
+from optimize import optimize
+from optimize import optimize_weights_track
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomHorizontalFlip, ToTensor

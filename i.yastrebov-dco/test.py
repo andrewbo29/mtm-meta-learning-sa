@@ -19,27 +19,16 @@ def get_model(options):
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding().cuda()
     elif options.network == 'ResNet':
-        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 5).cuda()
-            if opt.gpu != '0':
-                network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
-        else:
-            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
+        network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
     else:
         print ("Cannot recognize the network type")
         assert(False)
         
     # Choose the classification head
-    if options.head == 'Ridge':
-        cls_head = ClassificationHead(base_learner='Ridge').cuda()
-    elif options.head == 'Proto':
+    if options.head == 'Proto':
         cls_head = ClassificationHead(base_learner='Proto').cuda()
     elif options.head == 'SVM-CS':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
-    elif options.head == 'SVM-He':
-        cls_head = ClassificationHead(base_learner='SVM-He').cuda()
-    elif options.head == 'SVM-WW':
-        cls_head = ClassificationHead(base_learner='SVM-WW').cuda()
     else:
         print ("Cannot recognize the base learner type")
         assert(False)
