@@ -19,11 +19,32 @@ def y_loss(weights, losses):
                 np.log(weights[i] ** 2) for i in range(len(losses))])
     return y
 
-def optimize(weights, losses, iteration_num):
+def optimize(weights, losses, iteration_num, alpha = 0, beta = 0):
     delta_n = delta_fabric(len(losses))
-    alpha_n = alpha_fabric(iteration_num)
-    beta_n = beta_fabric(iteration_num)
+    if alpha == 0:
+        alpha_n = alpha_fabric(iteration_num)
+    else:
+        alpha_n = alpha
+    if beta == 0:
+        beta_n = beta_fabric(iteration_num)
+    else:
+        beta_n = beta
     y_plus = y_loss([weights[i] + beta_n * delta_n[i] for i in range(len(weights))], losses)
     y_minus = y_loss([weights[i] - beta_n * delta_n[i] for i in range(len(weights))], losses)
+    weights_update = weights - alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
+    return weights_update
+    
+def optimize_weights_track(weights, losses_2, iteration_num, alpha = 0, beta = 0):
+    delta_n = delta_fabric(len(weights))
+    if alpha == 0:
+        alpha_n = alpha_fabric(iteration_num)
+    else:
+        alpha_n = alpha
+    if beta == 0:
+        beta_n = beta_fabric(iteration_num)
+    else:
+        beta_n = beta
+    y_plus = y_loss([weights[i] + beta_n * delta_n[i] for i in range(len(weights))], losses_2[0])
+    y_minus = y_loss([weights[i] - beta_n * delta_n[i] for i in range(len(weights))], losses_2[1])
     weights_update = weights - alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
     return weights_update

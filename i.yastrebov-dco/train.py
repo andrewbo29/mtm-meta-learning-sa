@@ -5,9 +5,12 @@ import os
 import torch
 import torch.nn.functional as F
 
+from itertools import combinations
 from models.classification_heads import ClassificationHead
+from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
-from optimize import optimize
+from optimize1 import optimize
+from optimize1 import optimize_weights_track
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomHorizontalFlip, ToTensor
@@ -33,28 +36,19 @@ def one_hot(indices, depth):
 
 def get_model(options):
     # Choose the embedding network
-    if options.network == 'ResNet':
-        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 5).cuda()
-            if opt.gpu != '0':
-                network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
-        else:
-            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
+    if options.network == 'ProtoNet':
+        network = ProtoNetEmbedding().cuda()
+    elif options.network == 'ResNet':
+        network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
     else:
         print ("Cannot recognize the network type")
         assert(False)
         
     # Choose the classification head
-    if options.head == 'Ridge':
-        cls_head = ClassificationHead(base_learner='Ridge').cuda()
-    elif options.head == 'Proto':
+    if options.head == 'Proto':
         cls_head = ClassificationHead(base_learner='Proto').cuda()
     elif options.head == 'SVM-CS':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
-    elif options.head == 'SVM-He':
-        cls_head = ClassificationHead(base_learner='SVM-He').cuda()
-    elif options.head == 'SVM-WW':
-        cls_head = ClassificationHead(base_learner='SVM-WW').cuda()
     else:
         print ("Cannot recognize the base learner type")
         assert(False)
@@ -196,6 +190,43 @@ def get_dataset(options):
         from torchmeta.datasets import FC100
         mean_pix = [x / 255 for x in [129.37731888, 124.10583864, 112.47758569]]
         std_pix = [x / 255 for x in [68.20947949, 65.43124043, 70.45866994]]
+        if opt.coarse:
+            dataset_train = FC100(
+                "data",
+                num_classes_per_task = 1,
+                meta_train = True,
+                download = True)
+            dataset_train = ClassSplitter(dataset_train, shuffle = False,
+                num_train_per_class = 1,
+                num_test_per_class = 1)
+            li = {}
+            for i in range(len(dataset_train)):
+                li[i] = dataset_train[(i,)]['train'].__getitem__(0)[1][0][0]
+            sli = list(li.values())
+            dli = {x: i for i, x in enumerate(set(sli))}
+            nli = [dli[item] for item in sli]
+            def new__iter__(self):
+                num_coarse = max(nli) + 1
+                for i in range(num_coarse):
+                    for index in combinations([n for n in range(len(li)) if nli[n] == i], self.num_classes_per_task):
+                        yield self[index]
+            def newsample_task(self):
+                num = self.np_random.randint(max(nli) + 1)
+                sample = [n for n in range(len(li)) if nli[n] == num]
+                index = self.np_random.choice(sample, size=self.num_classes_per_task, replace=False)
+                return self[tuple(index)]
+            def new__len__(self):
+                total_length = 0
+                num_coarse = max(nli) + 1
+                for j in range(num_coarse):
+                    num_classes, length = len([n for n in range(len(li)) if nli[n] == j]), 1
+                    for i in range(1, self.num_classes_per_task + 1):
+                        length *= (num_classes - i + 1) / i
+                    total_length += length
+                return int(total_length)
+            FC100.__iter__ = new__iter__
+            FC100.sample_task = newsample_task
+            FC100.__len__ = new__len__
         dataset_train = FC100(
             "data",
             num_classes_per_task = opt.train_way,
@@ -281,10 +312,22 @@ if __name__ == '__main__':
                             help='number of task runs before update')
     parser.add_argument('--pretrain', type=int, default=20,
                             help='number of epochs without MTL')
-    parser.add_argument('--mid-stage', type=int, default=10,
-                            help='number of epochs for stage after pretrain')
-    parser.add_argument('--sin-first', action='store_true',
-                            help='using sin weights before spsa weights')
+    parser.add_argument('--tracking', action='store_true',
+                            help='track loss for SPSA')
+    parser.add_argument('--alpha', type=float, default=0.0,
+                            help='alpha in SPSA optimization')
+    parser.add_argument('--beta', type=float, default=0.0,
+                            help='beta in SPSA optimization')
+    parser.add_argument('--decrease-alpha', action='store_true',
+                            help='decrease alpha in SPSA optimization')
+    parser.add_argument('--coarse', action='store_true',
+                            help='use coarse classes only for subtasks')
+    parser.add_argument('--half-spsa', action='store_false',
+                            help='do SPSA optimization only for epoch half, do backpropagation only for epoch half')
+    parser.add_argument('--epoch-spsa', action='store_true',
+                            help='do SPSA after every epoch')
+    parser.add_argument('--train-weights', action='store_true',
+                            help='train weights like a layer')
 
     opt = parser.parse_args()
     
@@ -303,7 +346,7 @@ if __name__ == '__main__':
                                  {'params': cls_head.parameters()}], lr=0.1, momentum=0.9, \
                                           weight_decay=5e-4, nesterov=True)
     
-    lambda_epoch = lambda e: 1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
+    lambda_epoch = lambda e: (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) if e < opt.pretrain or opt.train_weights else (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) / 10
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
 
     max_val_acc = 0.0
@@ -311,33 +354,21 @@ if __name__ == '__main__':
     timer = Timer()
     x_entropy = torch.nn.CrossEntropyLoss()
     
-    weights0 = np.array([1 / opt.task_number for _ in range(opt.task_number)])
-    weights1 = np.array([np.sin(i * np.pi / opt.task_number + np.pi / (2 * opt.task_number)) + 0.9 for i in range(1, opt.task_number + 1)])
-    weights1 = weights1 / weights1.sum()
-    weights = np.ones_like(weights0)
+    weights = np.array([1 / opt.task_number for _ in range(opt.task_number)])
     i_cum = 0
-
-    if opt.task_number > 1:
-        if opt.sin_first:
-          sin_start = opt.pretrain
-          sin_finish = opt.pretrain + opt.mid_stage
-          spsa_start = opt.pretrain + opt.mid_stage
-          spsa_finish = opt.num_epoch
-        else:
-          spsa_start = opt.pretrain
-          spsa_finish = opt.pretrain + opt.mid_stage
-          sin_start = opt.pretrain + opt.mid_stage
-          sin_finish = opt.num_epoch
+    
+    if (opt.task_number > 1) and not opt.train_weights:
+        spsa_start = opt.pretrain
     else:
         spsa_start = opt.num_epoch + 1
-        spsa_finish = opt.num_epoch + 1
-        sin_start = opt.num_epoch + 1
-        sin_finish = opt.num_epoch + 1
     
     for epoch in range(1, opt.num_epoch + 1):
         # Train on the training split
         losses_all = []
         acc_all = []
+        
+        losses_2n_1 = []
+        losses_2n = []
         
         # Fetch the current epoch's learning rate
         epoch_learning_rate = 0.1
@@ -353,15 +384,14 @@ if __name__ == '__main__':
         train_losses = []
 
         with tqdm(dataloader_train, total = opt.train_episode, initial = 1) as pbar:
-          if epoch == spsa_start + 1:
-            if opt.sin_first:
-              weights = weights1
-            else:
-              weights = weights0
+          s = 0
+          if opt.epoch_spsa and epoch > spsa_start:
+              opt.alpha = .25 / (((epoch - opt.pretrain) * opt.task_number) ** (1 / 6))
+              opt.beta = 15 / (((epoch - opt.pretrain) * opt.task_number) ** (1 / 24))
+          if opt.train_weights & (epoch == opt.pretrain + 1):
+              weights = torch.ones(opt.task_number).to(device='cuda')
           for i, batch in enumerate(pbar, 1):
-            if (epoch > sin_start) & (epoch <= sin_finish):
-              weight = np.sin(i * np.pi / opt.task_number + np.pi / (2 * opt.task_number)) + 0.9
-              weights[(i - 1) % opt.task_number] = weight
+            #j = 0
             data_support, labels_support = batch["train"]
             data_query, labels_query = batch["test"]
             data_support = data_support.to(device='cuda')
@@ -396,35 +426,63 @@ if __name__ == '__main__':
             if (opt.task_number == 1) or (epoch <= opt.pretrain):
                 loss_all = loss
             elif (i % opt.task_number == 0):
-                if (epoch > sin_start) & (epoch <= sin_finish):
-                  weights = weights / np.sum(weights)             
-                for j, loss_val in enumerate(losses_all):
-                  if (epoch > sin_start) & (epoch <= sin_finish):
-                    loss_all += weights[j] * loss_val
-                  else:
-                    loss_all += (1 / (weights[j] ** 2) * loss_val + np.log(weights[j] ** 2))
-                if (epoch > spsa_start) & (epoch <= spsa_finish):
-                  weights = optimize(weights, losses_all, i_cum + i / opt.task_number)
-                  weights = weights / np.sum(weights)
+                if not losses_2n_1:
+                    losses_2n_1 = losses_all
+                elif not losses_2n:
+                    losses_2n = losses_all
+                else:
+                    losses_2n_1 = losses_2n
+                    losses_2n = losses_all
+                if opt.train_weights & (epoch >= opt.pretrain + 1):
+                    loss_all = torch.tensor(0, dtype = torch.float).to(device='cuda')
+                if opt.train_weights:
+                    for j, loss_val in enumerate(losses_all):                    
+                        loss_all += (1 / (weights[j] ** 2) * loss_val + torch.log(weights[j] ** 2))
+                else:
+                    for j, loss_val in enumerate(losses_all):                    
+                        loss_all += (1 / (weights[j] ** 2) * loss_val + np.log(weights[j] ** 2))
+                if (epoch > spsa_start) and not opt.train_weights:
+                  if opt.tracking and losses_2n_1 and losses_2n:
+                    s += 1
+                    if opt.epoch_spsa:
+                      s = opt.task_number
+                    weights = optimize_weights_track(weights, (losses_2n_1, losses_2n), i_cum + s, opt.alpha, opt.beta)
+                  elif opt.half_spsa or (i <= opt.train_episode // 2):
+                    s += 1
+                    if opt.epoch_spsa:
+                      s = opt.task_number
+                    weights = optimize(weights, losses_all, i_cum + s, opt.alpha, opt.beta)
                 
-            if loss_all != 0:
+            if loss_all is not 0:
                 train_losses.append(loss_all.item() / len(losses_all))
-                train_accuracies.append(np.mean([acc.item() for acc in acc_all]))                
-                loss_all.backward()
-                optimizer.step()
-                optimizer.zero_grad()
+                train_accuracies.append(np.mean([acc.item() for acc in acc_all]))
+                if opt.half_spsa or (i > opt.train_episode // 2) or (epoch <= opt.pretrain):
+                    loss_all.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
                 losses_all = []
                 acc_all = []
+                if opt.epoch_spsa and epoch > spsa_start:
+                  for w in range(len(weights)):
+                    if weights[w] < .1:
+                      weights[w] = .1
 
             if (i % (opt.train_episode // 10) == 0):
                 train_acc_avg = np.mean(np.array(train_accuracies))
                 log(log_file_path, 'Train Epoch: {}\tBatch: [{}/{}]\tLoss: {:.4f}\tAccuracy: {:.2f} % ({:.2f} %)'.format(
-                            epoch, i, opt.train_episode, train_losses[-1], train_acc_avg, train_accuracies[-1]))            
-            
+                            epoch, i, opt.train_episode, train_losses[-1], train_acc_avg, train_accuracies[-1]))
+
             if i == opt.train_episode:
-                if epoch > spsa_start:
-                    i_cum += i // opt.task_number
+                i_cum += s
+                if opt.decrease_alpha:
+                    if epoch == 40:
+                        opt.alpha /= 5
+                    if epoch == 50:
+                        opt.alpha /= 5
                 break
+          
+          if opt.train_weights == opt.epoch_spsa:
+            weights = weights / np.sum(weights)
 
         lr_scheduler.step()
         # Evaluate on the validation split

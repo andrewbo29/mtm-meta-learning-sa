@@ -6,8 +6,8 @@ import torch
 import torch.nn.functional as F
 
 from models.classification_heads import ClassificationHead
+from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
-from optimize import optimize
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomHorizontalFlip, ToTensor
@@ -16,7 +16,9 @@ from utils import check_dir, count_accuracy, log, set_gpu, Timer
 
 def get_model(options):
     # Choose the embedding network
-    if options.network == 'ResNet':
+    if options.network == 'ProtoNet':
+        network = ProtoNetEmbedding().cuda()
+    elif options.network == 'ResNet':
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 5).cuda()
             if opt.gpu != '0':
