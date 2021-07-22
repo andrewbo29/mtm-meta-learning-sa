@@ -99,7 +99,7 @@ class ModelAgnosticMetaLearning:
                 self.scheduler.base_lrs([group['initial_lr']
                                          for group in self.optimizer.param_groups])
 
-        def get_outer_losses(self, task_weighting: TaskWeightingBase, batch) -> (torch.Tensor, dict):
+    def get_outer_losses(self, task_weighting: TaskWeightingBase, batch) -> (torch.Tensor, dict):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
@@ -171,7 +171,7 @@ class ModelAgnosticMetaLearning:
 
         return params, results
 
-        def train(self, dataloader, task_weighting, weight_normalizer, min_weight,
+    def train(self, dataloader, task_weighting, weight_normalizer, min_weight,
                   epoch, max_batches=500, silent=False, **kwargs):
         iter = self.train_iter(dataloader, task_weighting, weight_normalizer, epoch, max_batches,
                                min_weight)
