@@ -192,3 +192,13 @@ class GradientNovelLossWeighting(GradientWeightingBase):
         mul = 1. / (self.weights ** 2)
         add = torch.log(self.weights ** 2)
         return (losses * mul + add).mean()
+
+
+class WeightNormalizer:
+    def __init__(self, normalize_after: Optional[int]):
+        self.normalize_after = normalize_after
+
+    def normalize(self, iteration, weights):
+        if (self.normalize_after is None) or (iteration == 0) or (iteration % self.normalize_after != 0):
+            return weights
+        return weights / np.linalg.norm(weights, ord=2)

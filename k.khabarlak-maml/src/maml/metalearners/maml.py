@@ -169,8 +169,10 @@ class ModelAgnosticMetaLearning:
 
         return params, results
 
-    def train(self, dataloader, task_weighting, epoch, max_batches=500, silent=False, **kwargs):
-        iter = self.train_iter(dataloader, task_weighting, epoch, max_batches=max_batches)
+        def train(self, dataloader, task_weighting, weight_normalizer, min_weight,
+                  epoch, max_batches=500, silent=False, **kwargs):
+        iter = self.train_iter(dataloader, task_weighting, weight_normalizer, epoch, max_batches,
+                               task_weighting_schedule, min_weight)
         with tqdm(iter, total=max_batches, disable=silent, **kwargs) as pbar:
             for results in pbar:
                 postfix = {'loss': f"{results['mean_outer_loss']:.4f}"}
@@ -178,8 +180,8 @@ class ModelAgnosticMetaLearning:
                     postfix['accuracy'] = f"{np.mean(results['accuracies_after']):.4f}"
                 pbar.set_postfix(**postfix)
 
-    def train_iter(self, dataloader, task_weighting: TaskWeightingBase,
-                   epoch, max_batches):
+    def train_iter(self, dataloader, task_weighting: TaskWeightingBase, weight_normalizer: WeightNormalizer,
+                   epoch, max_batches, min_weight: Optional[float]):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
                                'optimizer is `None`. In order to train `{0}`, you must '
@@ -210,7 +212,12 @@ class ModelAgnosticMetaLearning:
                 loss.backward()
                 self.optimizer.step()
 
-                task_weighting.after_gradient_step(iteration, outer_losses)
+                task_weighting.update_inner_weights(iteration, outer_losses)
+
+                if hasattr(task_weighting, 'weights'):
+                    task_weighting.weights = weight_normalizer.normalize(iteration, task_weighting.weights)
+                    if min_weight is not None:
+                        task_weighting.weights = np.clip(task_weighting.weights, a_min=min_weight, a_max=None)
 
                 num_batches += 1
 

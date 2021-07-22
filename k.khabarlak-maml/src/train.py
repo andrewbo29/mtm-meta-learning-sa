@@ -219,6 +219,12 @@ if __name__ == '__main__':
     parser.add_argument('--spsa-beta-step-multiplier', type=float,
                         help='Multiplier value SpsaStepParamStrategy')
 
+    parser.add_argument('--normalize-spsa-weights-after', type=int, default=None,
+                        help='normalize spsa weights after specified number of iterations to avoid '
+                             'loss explosion')
+    parser.add_argument('--min-weight', type=float, default=None,
+                        help='Min spsa weight allowed during optimization')
+
     # Gradient weighting
     parser.add_argument('--use-inner-optimizer', action='store_true', default=False,
                         help='Use inner gradient optimizer for task weight optimization '
