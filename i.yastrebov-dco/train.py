@@ -9,8 +9,8 @@ from itertools import combinations
 from models.classification_heads import ClassificationHead
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
-from optimize1 import optimize
-from optimize1 import optimize_weights_track
+from optimize import optimize
+from optimize import optimize_weights_track
 from scipy.stats import rankdata
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
@@ -40,27 +40,16 @@ def get_model(options):
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding().cuda()
     elif options.network == 'ResNet':
-        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 5).cuda()
-            if opt.gpu != '0':
-                network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
-        else:
-            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
+        network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
     else:
         print ("Cannot recognize the network type")
         assert(False)
         
     # Choose the classification head
-    if options.head == 'Ridge':
-        cls_head = ClassificationHead(base_learner='Ridge').cuda()
-    elif options.head == 'Proto':
+    if options.head == 'Proto':
         cls_head = ClassificationHead(base_learner='Proto').cuda()
     elif options.head == 'SVM-CS':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
-    elif options.head == 'SVM-He':
-        cls_head = ClassificationHead(base_learner='SVM-He').cuda()
-    elif options.head == 'SVM-WW':
-        cls_head = ClassificationHead(base_learner='SVM-WW').cuda()
     else:
         print ("Cannot recognize the base learner type")
         assert(False)
