@@ -99,7 +99,7 @@ class ModelAgnosticMetaLearning:
                 self.scheduler.base_lrs([group['initial_lr']
                                          for group in self.optimizer.param_groups])
 
-    def get_outer_losses(self, batch) -> (torch.Tensor, dict):
+        def get_outer_losses(self, task_weighting: TaskWeightingBase, batch) -> (torch.Tensor, dict):
         if 'test' not in batch:
             raise RuntimeError('The batch does not contain any test dataset.')
 
@@ -133,7 +133,9 @@ class ModelAgnosticMetaLearning:
 
             with torch.set_grad_enabled(self.model.training):
                 test_logits = self.model(test_inputs, params=params)
-                outer_loss = self.loss_function(test_logits, test_targets)
+                outer_losses_for_each_image = \
+                    self.loss_function(test_logits, test_targets, reduction='none')
+                outer_loss = task_weighting.compute_weighted_losses_for_each_image(task_id, outer_losses_for_each_image)
                 results['outer_losses'][task_id] = outer_loss.item()
                 outer_losses[task_id] = outer_loss
 
@@ -203,8 +205,10 @@ class ModelAgnosticMetaLearning:
 
                 self.optimizer.zero_grad()
 
+                task_weighting.before_gradient_step(iteration, batch)
+
                 batch = tensors_to_device(batch, device=self.device)
-                outer_losses, results = self.get_outer_losses(batch)
+                outer_losses, results = self.get_outer_losses(task_weighting, batch)
                 yield results
 
                 loss = task_weighting.compute_weighted_loss(iteration, outer_losses)
