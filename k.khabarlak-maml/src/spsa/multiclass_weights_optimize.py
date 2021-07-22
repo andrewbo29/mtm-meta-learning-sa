@@ -150,3 +150,45 @@ class SinWeighting(TaskWeightingBase):
 
     def update_inner_weights(self, iteration, losses):
         pass
+
+
+class GradientWeightingBase(TaskWeightingBase, ABC):
+    def __init__(self, use_inner_optimizer, num_tasks_in_batch, device):
+        super().__init__(device)
+        self.weights = nn.Parameter(
+            torch.ones(size=(num_tasks_in_batch,),
+                       requires_grad=True,
+                       dtype=torch.float,
+                       device=device))
+        self.optimizer = None
+        if use_inner_optimizer:
+            self.optimizer = torch.optim.Adam([self.weights], lr=1e-3)
+
+    @property
+    def outer_optimization_weights(self):
+        return [] if self.optimizer is None else [self.weights]
+
+    def update_inner_weights(self, iteration, losses):
+        if self.optimizer is None:
+            # Update is done in backward pass
+            return
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+
+
+class GradientWeighting(GradientWeightingBase):
+    def __init__(self, use_inner_optimizer, num_tasks_in_batch, device):
+        super().__init__(use_inner_optimizer, num_tasks_in_batch, device)
+
+    def compute_weighted_loss(self, iteration, losses):
+        return (losses * self.weights).mean()
+
+
+class GradientNovelLossWeighting(GradientWeightingBase):
+    def __init__(self, use_inner_optimizer, num_tasks_in_batch, device):
+        super().__init__(use_inner_optimizer, num_tasks_in_batch, device)
+
+    def compute_weighted_loss(self, iteration, losses):
+        mul = 1. / (self.weights ** 2)
+        add = torch.log(self.weights ** 2)
+        return (losses * mul + add).mean()

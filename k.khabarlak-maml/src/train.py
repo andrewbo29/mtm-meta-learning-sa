@@ -91,6 +91,14 @@ def main(args):
         task_weighting = weighting.SpsaWeighting(args.batch_size, alpha, beta, device)
     elif args.task_weighting == 'sin':
         task_weighting = weighting.SinWeighting(args.batch_size, device)
+    elif args.task_weighting == 'gradient':
+        task_weighting = weighting.GradientWeighting(args.use_inner_optimizer, args.batch_size, device=device)
+        meta_optimizer = torch.optim.Adam(list(benchmark.model.parameters()) + task_weighting.outer_optimization_weights,
+                                          lr=args.meta_lr)
+    elif args.task_weighting == 'gradient-novel-loss':
+        task_weighting = weighting.GradientNovelLossWeighting(args.use_inner_optimizer, args.batch_size, device=device)
+        meta_optimizer = torch.optim.Adam(list(benchmark.model.parameters()) + task_weighting.outer_optimization_weights,
+                                          lr=args.meta_lr)
     else:
         raise ValueError(f'Unknown weighting value: {args.task_weighting}')
 
@@ -211,6 +219,11 @@ if __name__ == '__main__':
     parser.add_argument('--spsa-beta-step-multiplier', type=float,
                         help='Multiplier value SpsaStepParamStrategy')
 
+    # Gradient weighting
+    parser.add_argument('--use-inner-optimizer', action='store_true', default=False,
+                        help='Use inner gradient optimizer for task weight optimization '
+                             '(in contrast to optimizing weights together with network weights)')
+    
     # Misc
     parser.add_argument('--run-name', type=str, default=None, help='Custom name for run results')
     parser.add_argument('--num-workers', type=int, default=1,
