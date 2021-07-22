@@ -73,10 +73,22 @@ def main(args):
             benchmark.model.load_state_dict(torch.load(f, map_location=device))
 
     best_value = None
+
+    alpha = weighting.get_param_strategy(args.spsa_alpha_strategy,
+                                         args.spsa_alpha,
+                                         args.spsa_alpha_exp_gamma,
+                                         args.spsa_alpha_step_step_every,
+                                         args.spsa_alpha_step_multiplier)
+    beta = weighting.get_param_strategy(args.spsa_beta_strategy,
+                                        args.spsa_beta,
+                                        args.spsa_beta_exp_gamma,
+                                        args.spsa_beta_step_step_every,
+                                        args.spsa_beta_step_multiplier)
+
     if args.task_weighting == 'none':
         task_weighting = weighting.TaskWeightingNone(device)
     elif args.task_weighting == 'spsa-delta':
-        task_weighting = weighting.SpsaWeightingDelta(args.batch_size, device)
+        task_weighting = weighting.SpsaWeighting(args.batch_size, alpha, beta, device)
     elif args.task_weighting == 'sin':
         task_weighting = weighting.SinWeighting(args.batch_size, device)
     else:
@@ -174,6 +186,30 @@ if __name__ == '__main__':
     parser.add_argument('--task-weighting', type=str,
                         choices=['none', 'spsa-delta', 'sin'], default='none',
                         help='Type of multi-tasking weighting')
+
+    parser.add_argument('--spsa-alpha-strategy', type=str,
+                        choices=['exponential', 'constant', 'step'],
+                        default='exponential', help='alpha weighting strategy for spsa')
+    parser.add_argument('--spsa-alpha', type=float, default=0.25,
+                        help='alpha parameter to the spsa method')
+    parser.add_argument('--spsa-alpha-exp-gamma', type=float, default=1 / 6.,
+                        help='Gamma parameter for exponential alpha weighting')
+    parser.add_argument('--spsa-alpha-step-step-every', type=int,
+                        help='Step value for SpsaStepParamStrategy')
+    parser.add_argument('--spsa-alpha-step-multiplier', type=float,
+                        help='Multiplier value SpsaStepParamStrategy. Should be < 1.')
+
+    parser.add_argument('--spsa-beta-strategy', type=str,
+                        choices=['exponential', 'constant', 'step'],
+                        default='exponential', help='beta weighting strategy for spsa')
+    parser.add_argument('--spsa-beta', type=float, default=15.,
+                        help='beta parameter to the spsa method')
+    parser.add_argument('--spsa-beta-exp-gamma', type=float, default=1 / 24.,
+                        help='Gamma parameter for exponential beta weighting')
+    parser.add_argument('--spsa-beta-step-step-every', type=int,
+                        help='Step value for SpsaStepParamStrategy')
+    parser.add_argument('--spsa-beta-step-multiplier', type=float,
+                        help='Multiplier value SpsaStepParamStrategy')
 
     # Misc
     parser.add_argument('--run-name', type=str, default=None, help='Custom name for run results')

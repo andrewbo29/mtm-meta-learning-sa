@@ -32,6 +32,45 @@ class SpsaParamExponentialStrategy(SpsaParamStrategy):
     def __call__(self, iteration):
         return np.float32(self._initial_value / (iteration ** self._gamma))
 
+
+class SpsaParamConstantStrategy(SpsaParamStrategy):
+    def __init__(self, value):
+        self._value = value
+
+    def __call__(self, iteration):
+        return self._value
+
+
+class SpsaParamStepStrategy(SpsaParamStrategy):
+    def __init__(self, initial_value, step_every, multiplier):
+        self._value = initial_value
+        self._step_every = step_every
+        self._multiplier = multiplier
+        self._last_update = 0
+
+    def __call__(self, iteration):
+        if self._last_update != iteration and iteration % self._step_every == 0:
+            print(f'SpsaParamStepStrategy from: {self._value} to {self._value * self._multiplier}')
+            self._value = self._value * self._multiplier
+            self._last_update = iteration
+        return self._value
+
+
+def get_param_strategy(strategy_type: str, initial_value: float, exp_gamma: Optional[float],
+                       step: Optional[int], step_multiplier: Optional[float]):
+    if strategy_type == 'exponential':
+        if exp_gamma is None:
+            raise ValueError("exp_gamma can't be None for exponential strategy")
+        return SpsaParamExponentialStrategy(initial_value, exp_gamma)
+    elif strategy_type == 'constant':
+        return SpsaParamConstantStrategy(initial_value)
+    elif strategy_type == 'step':
+        if step is None or step_multiplier is None:
+            raise ValueError('StepStrategy requested, but parameters are not set!')
+        return SpsaParamStepStrategy(initial_value, step, step_multiplier)
+    else:
+        raise ValueError(f'Unknown {strategy_type=}')
+
 class TaskWeightingBase:
     def __init__(self, device):
         self.device = device
