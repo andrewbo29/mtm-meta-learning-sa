@@ -152,6 +152,82 @@ class SinWeighting(TaskWeightingBase):
         pass
 
 
+class SpsaWeightingPerClass(TaskWeightingBase):
+    def __init__(self, max_classes, class_info_label, skip_for_iterations,
+                 alpha: SpsaParamStrategy, beta: SpsaParamStrategy, device):
+        super().__init__(device)
+
+        self.class_info_label = class_info_label
+        self.skip_for_iterations = skip_for_iterations
+
+        self.alpha = alpha
+        self.beta = beta
+
+        self.weights = np.array([1.] * max_classes, dtype=np.float32)
+        self.iteration = None
+        self.batch = None
+
+        self.weights_update = None
+        self.class_ids = None
+
+    @property
+    def test_class_info_label(self):
+        return 'test' + self.class_info_label
+
+    def before_gradient_step(self, iteration, batch):
+        self.iteration = iteration
+        self.batch = batch
+
+    def _get_weights_for_batch_items(self, class_ids):
+        weights_for_batch = np.ndarray(shape=(len(class_ids),))
+        for idx, class_id in enumerate(class_ids.flatten()):
+            weights_for_batch[idx] = self.weights[class_id]
+        return weights_for_batch
+
+    def _update_weights_for_batch_items(self, weights_update, class_ids):
+        num_tasks = len(self.batch[self.test_class_info_label])
+        for update, class_id in zip(weights_update, class_ids):
+            # / num_task for the update to be of the same scale
+            # as ordinary spsa
+            self.weights[class_id] -= update / num_tasks
+
+    def _compute_weights_update(self, weights, outer_losses_for_each_image):
+        n = len(weights)
+        delta_n = delta(n)
+        alpha_n = self.alpha(self.iteration)
+        beta_n = self.beta(self.iteration)
+
+        y_plus = compute_weighted_loss(weights + beta_n * delta_n, outer_losses_for_each_image, self.device) \
+            .detach().cpu().numpy()
+        y_minus = compute_weighted_loss(weights - beta_n * delta_n, outer_losses_for_each_image, self.device) \
+            .detach().cpu().numpy()
+
+        return alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
+
+    def compute_weighted_losses_for_each_image(self, task_id, outer_losses_for_each_image):
+        if self.iteration % 100 < self.skip_for_iterations:
+            return outer_losses_for_each_image.mean()
+
+        # 'test_class_ids' because we weight outer losses (computed on Test (Query) subset)
+        class_ids = self.batch[self.test_class_info_label][task_id]
+        weights = self._get_weights_for_batch_items(class_ids)
+
+        result_loss = compute_weighted_loss(weights, outer_losses_for_each_image, self.device)
+
+        if self.iteration > 0:
+            self.weights_update = self._compute_weights_update(weights, outer_losses_for_each_image)
+            self.class_ids = class_ids
+
+        return result_loss
+
+    def compute_weighted_loss(self, iteration, losses):
+        return losses.mean()
+
+    def update_inner_weights(self, iteration, losses):
+        if self.weights_update is not None:
+            self._update_weights_for_batch_items(self.weights_update, self.class_ids)
+
+
 class GradientWeightingBase(TaskWeightingBase, ABC):
     def __init__(self, use_inner_optimizer, num_tasks_in_batch, device):
         super().__init__(device)

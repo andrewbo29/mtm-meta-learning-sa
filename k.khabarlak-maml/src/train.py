@@ -11,7 +11,8 @@ from os import path
 
 from torchmeta.utils.data import BatchMetaDataLoader
 
-from maml.datasets import get_benchmark_by_name
+from maml.dataset_setup import get_benchmark_by_name
+from maml.dataloaders import BatchMetaDataLoaderWithLabels
 from maml.metalearners import ModelAgnosticMetaLearning
 
 
@@ -49,11 +50,12 @@ def main(args):
                                       args.no_max_pool,
                                       hidden_size=args.hidden_size)
 
-    meta_train_dataloader = BatchMetaDataLoader(benchmark.meta_train_dataset,
-                                                batch_size=args.batch_size,
-                                                shuffle=True,
-                                                num_workers=args.num_workers,
-                                                pin_memory=True)
+    meta_train_dataloader = BatchMetaDataLoaderWithLabels(
+        benchmark.meta_train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        pin_memory=True)
     meta_val_dataloader = BatchMetaDataLoader(benchmark.meta_val_dataset,
                                               batch_size=args.batch_size,
                                               shuffle=True,
@@ -89,6 +91,20 @@ def main(args):
         task_weighting = weighting.TaskWeightingNone(device)
     elif args.task_weighting == 'spsa-delta':
         task_weighting = weighting.SpsaWeighting(args.batch_size, alpha, beta, device)
+    elif args.task_weighting == 'spsa-per-class':
+        task_weighting = weighting.SpsaWeightingPerClass(max_classes=100,
+                                                         class_info_label='_class_ids',
+                                                         skip_for_iterations=args.skip_for_iterations,
+                                                         alpha=alpha,
+                                                         beta=beta,
+                                                         device=device)
+    elif args.task_weighting == 'spsa-per-coarse-class':
+        task_weighting = weighting.SpsaWeightingPerClass(max_classes=20,
+                                                         class_info_label='_coarse_class_ids',
+                                                         skip_for_iterations=args.skip_for_iterations,
+                                                         alpha=alpha,
+                                                         beta=beta,
+                                                         device=device)
     elif args.task_weighting == 'sin':
         task_weighting = weighting.SinWeighting(args.batch_size, device)
     elif args.task_weighting == 'gradient':
@@ -192,8 +208,8 @@ if __name__ == '__main__':
 
     # SPSA
     parser.add_argument('--task-weighting', type=str,
-                        choices=['none', 'spsa-delta', 'sin'], default='none',
-                        help='Type of multi-tasking weighting')
+                        choices=['none', 'spsa-delta', 'spsa-per-class', 'sin',
+                                 'spsa-per-coarse-class', 'gradient', 'gradient-novel-loss'],
 
     parser.add_argument('--spsa-alpha-strategy', type=str,
                         choices=['exponential', 'constant', 'step'],
