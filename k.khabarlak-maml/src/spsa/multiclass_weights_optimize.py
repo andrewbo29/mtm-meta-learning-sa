@@ -183,7 +183,6 @@ class SpsaWeightingPerClass(TaskWeightingBase):
         super().__init__(device)
 
         self.class_info_label = class_info_label
-        self.skip_for_iterations = skip_for_iterations
 
         self.alpha = alpha
         self.beta = beta
@@ -230,9 +229,6 @@ class SpsaWeightingPerClass(TaskWeightingBase):
         return alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
 
     def compute_weighted_losses_for_each_image(self, task_id, outer_losses_for_each_image):
-        if self.iteration % 100 < self.skip_for_iterations:
-            return outer_losses_for_each_image.mean()
-
         # 'test_class_ids' because we weight outer losses (computed on Test (Query) subset)
         class_ids = self.batch[self.test_class_info_label][task_id]
         weights = self._get_weights_for_batch_items(class_ids)

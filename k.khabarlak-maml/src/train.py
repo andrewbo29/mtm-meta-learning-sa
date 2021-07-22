@@ -94,14 +94,12 @@ def main(args):
     elif args.task_weighting == 'spsa-per-class':
         task_weighting = weighting.SpsaWeightingPerClass(max_classes=100,
                                                          class_info_label='_class_ids',
-                                                         skip_for_iterations=args.skip_for_iterations,
                                                          alpha=alpha,
                                                          beta=beta,
                                                          device=device)
     elif args.task_weighting == 'spsa-per-coarse-class':
         task_weighting = weighting.SpsaWeightingPerClass(max_classes=20,
                                                          class_info_label='_coarse_class_ids',
-                                                         skip_for_iterations=args.skip_for_iterations,
                                                          alpha=alpha,
                                                          beta=beta,
                                                          device=device)

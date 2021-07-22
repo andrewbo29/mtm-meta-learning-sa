@@ -174,7 +174,7 @@ class ModelAgnosticMetaLearning:
         def train(self, dataloader, task_weighting, weight_normalizer, min_weight,
                   epoch, max_batches=500, silent=False, **kwargs):
         iter = self.train_iter(dataloader, task_weighting, weight_normalizer, epoch, max_batches,
-                               task_weighting_schedule, min_weight)
+                               min_weight)
         with tqdm(iter, total=max_batches, disable=silent, **kwargs) as pbar:
             for results in pbar:
                 postfix = {'loss': f"{results['mean_outer_loss']:.4f}"}
