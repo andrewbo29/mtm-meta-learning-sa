@@ -132,6 +132,31 @@ class SpsaWeighting(TaskWeightingBase):
         self.weights -= alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
 
 
+class SpsaTrackWeighting(SpsaWeighting):
+    def __init__(self, num_tasks_in_batch, alpha, beta, device):
+        super().__init__(num_tasks_in_batch, alpha, beta, device)
+        self.old_losses = None
+
+    def update_inner_weights(self, iteration, losses):
+        if self.old_losses is None:
+            self.old_losses = losses.detach()
+            return
+
+        n = len(self.weights)
+        delta_n = delta(n)
+        alpha_n = self.alpha(iteration)
+        beta_n = self.beta(iteration)
+
+        y_plus = compute_weighted_loss(self.weights + beta_n * delta_n, self.old_losses, self.device) \
+            .detach().cpu().numpy()
+        y_minus = compute_weighted_loss(self.weights - beta_n * delta_n, losses, self.device) \
+            .detach().cpu().numpy()
+
+        self.weights -= alpha_n * np.multiply(delta_n, (y_plus - y_minus) / (2 * beta_n))
+
+        self.old_losses = losses.detach()
+
+
 class SinWeighting(TaskWeightingBase):
     def __init__(self, num_tasks_in_batch, device):
         super().__init__(device)

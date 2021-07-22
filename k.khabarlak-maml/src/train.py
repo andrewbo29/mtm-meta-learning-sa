@@ -105,6 +105,8 @@ def main(args):
                                                          alpha=alpha,
                                                          beta=beta,
                                                          device=device)
+    elif args.task_weighting == 'spsa-track':
+        task_weighting = weighting.SpsaTrackWeighting(args.batch_size, alpha, beta, device)
     elif args.task_weighting == 'sin':
         task_weighting = weighting.SinWeighting(args.batch_size, device)
     elif args.task_weighting == 'gradient':
@@ -208,7 +210,7 @@ if __name__ == '__main__':
 
     # SPSA
     parser.add_argument('--task-weighting', type=str,
-                        choices=['none', 'spsa-delta', 'spsa-per-class', 'sin',
+                        choices=['none', 'spsa-delta', 'spsa-per-class', 'spsa-track', 'sin',
                                  'spsa-per-coarse-class', 'gradient', 'gradient-novel-loss'],
 
     parser.add_argument('--spsa-alpha-strategy', type=str,
