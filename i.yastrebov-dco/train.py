@@ -9,8 +9,9 @@ from itertools import combinations
 from models.classification_heads import ClassificationHead
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
-from optimize import optimize
-from optimize import optimize_weights_track
+from optimize1 import optimize
+from optimize1 import optimize_weights_track
+from scipy.stats import rankdata
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomHorizontalFlip, ToTensor
@@ -39,16 +40,27 @@ def get_model(options):
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding().cuda()
     elif options.network == 'ResNet':
-        network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
+        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
+            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 5).cuda()
+            if opt.gpu != '0':
+                network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
+        else:
+            network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
     else:
         print ("Cannot recognize the network type")
         assert(False)
         
     # Choose the classification head
-    if options.head == 'Proto':
+    if options.head == 'Ridge':
+        cls_head = ClassificationHead(base_learner='Ridge').cuda()
+    elif options.head == 'Proto':
         cls_head = ClassificationHead(base_learner='Proto').cuda()
     elif options.head == 'SVM-CS':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
+    elif options.head == 'SVM-He':
+        cls_head = ClassificationHead(base_learner='SVM-He').cuda()
+    elif options.head == 'SVM-WW':
+        cls_head = ClassificationHead(base_learner='SVM-WW').cuda()
     else:
         print ("Cannot recognize the base learner type")
         assert(False)
@@ -147,6 +159,62 @@ def get_dataset(options):
         from torchmeta.datasets import CIFARFS
         mean_pix = [x / 255 for x in [129.37731888, 124.10583864, 112.47758569]]
         std_pix = [x / 255 for x in [68.20947949, 65.43124043, 70.45866994]]
+        if opt.coarse:
+            dataset_train = CIFARFS(
+                "data",
+                num_classes_per_task = 1,
+                meta_train = True,
+                download = True)
+            dataset_train = ClassSplitter(dataset_train, shuffle = False,
+                num_train_per_class = 1,
+                num_test_per_class = 1)
+            li = {}
+            for i in range(len(dataset_train)):
+                li[i] = dataset_train[(i,)]['train'].__getitem__(0)[1][0][0]
+            sli = list(li.values())
+            dli = {x: ix for ix, x in enumerate(set(sli))}
+            if opt.super_coarse:
+                dli['aquatic_mammals'] = 21
+                dli['fish'] = 21
+                dli['flowers'] = 22
+                dli['fruit_and_vegetables'] = 22
+                dli['food_containers'] = 23
+                dli['household_electrical_devices'] = 23
+                dli['household_furniture'] = 23
+                dli['insects'] = 24
+                dli['non-insect_invertebrates'] = 24
+                dli['large_carnivores'] = 25
+                dli['reptiles'] = 25
+                dli['large_natural_outdoor_scenes'] = 26
+                dli['trees'] = 26
+                dli['large_omnivores_and_herbivores'] = 27
+                dli['medium_mammals'] = 27
+                dli['people'] = 27
+                dli['vehicles_1'] = 28
+                dli['vehicles_2'] = 28
+            nli = rankdata([dli[item] for item in sli], 'dense')
+            def new__iter__(self):
+                num_coarse = max(nli) + 1
+                for ix in range(1, num_coarse):
+                    for index in combinations([n for n in range(len(li)) if nli[n] == ix], self.num_classes_per_task):
+                        yield self[index]
+            def newsample_task(self):
+                num = self.np_random.randint(1, max(nli) + 1)
+                sample = [n for n in range(len(li)) if nli[n] == num]
+                index = self.np_random.choice(sample, size=self.num_classes_per_task, replace=False)
+                return self[tuple(index)]
+            def new__len__(self):
+                total_length = 0
+                num_coarse = max(nli) + 1
+                for jx in range(1, num_coarse):
+                    num_classes, length = len([n for n in range(len(li)) if nli[n] == jx]), 1
+                    for ix in range(1, self.num_classes_per_task + 1):
+                        length *= (num_classes - ix + 1) / ix
+                    total_length += length
+                return int(total_length)
+            CIFARFS.__iter__ = new__iter__
+            CIFARFS.sample_task = newsample_task
+            CIFARFS.__len__ = new__len__
         dataset_train = CIFARFS(
             "data",
             num_classes_per_task = opt.train_way,
@@ -203,25 +271,44 @@ def get_dataset(options):
             for i in range(len(dataset_train)):
                 li[i] = dataset_train[(i,)]['train'].__getitem__(0)[1][0][0]
             sli = list(li.values())
-            dli = {x: i for i, x in enumerate(set(sli))}
-            nli = [dli[item] for item in sli]
+            dli = {x: ix for ix, x in enumerate(set(sli))}
+            if opt.super_coarse:
+                dli['aquatic_mammals'] = 21
+                dli['fish'] = 21
+                dli['flowers'] = 22
+                dli['fruit_and_vegetables'] = 22
+                dli['food_containers'] = 23
+                dli['household_electrical_devices'] = 23
+                dli['household_furniture'] = 23
+                dli['insects'] = 24
+                dli['non-insect_invertebrates'] = 24
+                dli['large_carnivores'] = 25
+                dli['reptiles'] = 25
+                dli['large_natural_outdoor_scenes'] = 26
+                dli['trees'] = 26
+                dli['large_omnivores_and_herbivores'] = 27
+                dli['medium_mammals'] = 27
+                dli['people'] = 27
+                dli['vehicles_1'] = 28
+                dli['vehicles_2'] = 28
+            nli = rankdata([dli[item] for item in sli], 'dense')
             def new__iter__(self):
                 num_coarse = max(nli) + 1
-                for i in range(num_coarse):
-                    for index in combinations([n for n in range(len(li)) if nli[n] == i], self.num_classes_per_task):
+                for ix in range(1, num_coarse):
+                    for index in combinations([n for n in range(len(li)) if nli[n] == ix], self.num_classes_per_task):
                         yield self[index]
             def newsample_task(self):
-                num = self.np_random.randint(max(nli) + 1)
+                num = self.np_random.randint(1, max(nli) + 1)
                 sample = [n for n in range(len(li)) if nli[n] == num]
                 index = self.np_random.choice(sample, size=self.num_classes_per_task, replace=False)
                 return self[tuple(index)]
             def new__len__(self):
                 total_length = 0
                 num_coarse = max(nli) + 1
-                for j in range(num_coarse):
-                    num_classes, length = len([n for n in range(len(li)) if nli[n] == j]), 1
-                    for i in range(1, self.num_classes_per_task + 1):
-                        length *= (num_classes - i + 1) / i
+                for jx in range(1, num_coarse):
+                    num_classes, length = len([n for n in range(len(li)) if nli[n] == jx]), 1
+                    for ix in range(1, self.num_classes_per_task + 1):
+                        length *= (num_classes - ix + 1) / ix
                     total_length += length
                 return int(total_length)
             FC100.__iter__ = new__iter__
@@ -322,12 +409,16 @@ if __name__ == '__main__':
                             help='decrease alpha in SPSA optimization')
     parser.add_argument('--coarse', action='store_true',
                             help='use coarse classes only for subtasks')
+    parser.add_argument('--super-coarse', action='store_true',
+                            help='use super coarse classes only for subtasks')
     parser.add_argument('--half-spsa', action='store_false',
                             help='do SPSA optimization only for epoch half, do backpropagation only for epoch half')
     parser.add_argument('--epoch-spsa', action='store_true',
                             help='do SPSA after every epoch')
     parser.add_argument('--train-weights', action='store_true',
                             help='train weights like a layer')
+    parser.add_argument('--train-weights-loss', action='store_true',
+                            help='train weights like a layer with spsa loss')
 
     opt = parser.parse_args()
     
@@ -342,9 +433,17 @@ if __name__ == '__main__':
 
     (embedding_net, cls_head) = get_model(opt)
     
-    optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
-                                 {'params': cls_head.parameters()}], lr=0.1, momentum=0.9, \
-                                          weight_decay=5e-4, nesterov=True)
+    if opt.train_weights:
+      weights = torch.ones(opt.task_number, device='cuda', requires_grad = True)
+      optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
+                                   {'params': cls_head.parameters()},
+                                   {'params': weights}], lr=0.1,
+                                   momentum=0.9, weight_decay=5e-4, nesterov=True)
+    else:
+      weights = np.array([1 / opt.task_number for _ in range(opt.task_number)])
+      optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
+                                   {'params': cls_head.parameters()}], lr=0.1,
+                                   momentum=0.9, weight_decay=5e-4, nesterov=True)
     
     lambda_epoch = lambda e: (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) if e < opt.pretrain or opt.train_weights else (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) / 10
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
@@ -354,7 +453,6 @@ if __name__ == '__main__':
     timer = Timer()
     x_entropy = torch.nn.CrossEntropyLoss()
     
-    weights = np.array([1 / opt.task_number for _ in range(opt.task_number)])
     i_cum = 0
     
     if (opt.task_number > 1) and not opt.train_weights:
@@ -388,10 +486,7 @@ if __name__ == '__main__':
           if opt.epoch_spsa and epoch > spsa_start:
               opt.alpha = .25 / (((epoch - opt.pretrain) * opt.task_number) ** (1 / 6))
               opt.beta = 15 / (((epoch - opt.pretrain) * opt.task_number) ** (1 / 24))
-          if opt.train_weights & (epoch == opt.pretrain + 1):
-              weights = torch.ones(opt.task_number).to(device='cuda')
           for i, batch in enumerate(pbar, 1):
-            #j = 0
             data_support, labels_support = batch["train"]
             data_query, labels_query = batch["test"]
             data_support = data_support.to(device='cuda')
@@ -435,7 +530,7 @@ if __name__ == '__main__':
                     losses_2n = losses_all
                 if opt.train_weights & (epoch >= opt.pretrain + 1):
                     loss_all = torch.tensor(0, dtype = torch.float).to(device='cuda')
-                if opt.train_weights:
+                if opt.train_weights and opt.train_weights_loss:
                     for j, loss_val in enumerate(losses_all):                    
                         loss_all += (1 / (weights[j] ** 2) * loss_val + torch.log(weights[j] ** 2))
                 else:
