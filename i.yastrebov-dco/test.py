@@ -170,8 +170,10 @@ if __name__ == '__main__':
     
     # Evaluate on test set
     test_accuracies = []
-    with tqdm(dataloader_test, total = opt.episode, initial = 1) as pbar:
-      for i, batch in enumerate(pbar, 1):
+    with tqdm(total = opt.episode, initial = 1) as pbar:
+      i = 1
+      while i < opt.episode:
+       for batch in dataloader_test:
         data_support, labels_support = batch["train"]
         data_query, labels_query = batch["test"]
         data_support = data_support.to(device='cuda')
@@ -203,5 +205,7 @@ if __name__ == '__main__':
         if i % (opt.episode / 20) == 0:
             print('Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))
+        i += 1
+        pbar.update()
         if i == opt.episode:
             break
