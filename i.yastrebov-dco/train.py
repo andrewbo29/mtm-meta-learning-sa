@@ -437,7 +437,7 @@ if __name__ == '__main__':
         optimizer1 = torch.optim.Adam([{'params': weights}], lr=1e-3)
     elif opt.coarse_weights:
       weights = np.ones(20)
-      loss_hist = torch.zeros(20)
+      loss_hist = torch.zeros(20, device='cuda')
       optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
                                    {'params': cls_head.parameters()}], lr=0.1,
                                    momentum=0.9, weight_decay=5e-4, nesterov=True)
