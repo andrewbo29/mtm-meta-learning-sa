@@ -553,7 +553,7 @@ if __name__ == '__main__':
                   s += 1
                   if opt.coarse_weights:
                     weights = optimize(weights, loss_hist, i_cum + s, opt.alpha, opt.beta)
-                    loss_hist = torch.zeros(20)
+                    loss_hist = torch.zeros(20, device='cuda')
                   elif opt.tracking and losses_2n_1 and losses_2n:
                     if opt.epoch_spsa:
                       s = opt.task_number
