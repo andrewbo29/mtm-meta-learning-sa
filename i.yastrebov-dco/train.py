@@ -483,14 +483,14 @@ if __name__ == '__main__':
         train_accuracies = []
         train_losses = []
 
-        while i < opt.train_episode:
-         for batch in dataloader_train:
+        with tqdm(total = opt.train_episode, initial = 1) as pbar:
           i = 1
           s = 0
           if opt.epoch_spsa and epoch > spsa_start:
               opt.alpha = .25 / (((epoch - opt.pretrain) * opt.task_number) ** (1 / 6))
               opt.beta = 15 / (((epoch - opt.pretrain) * opt.task_number) ** (1 / 24))
-          for i, batch in enumerate(pbar, 1):
+          while i < opt.train_episode:
+           for batch in dataloader_train:
             data_support, labels_support = batch["train"]
             data_query, labels_query = batch["test"]
             if opt.coarse_weights:
