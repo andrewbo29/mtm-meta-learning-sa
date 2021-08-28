@@ -424,7 +424,7 @@ if __name__ == '__main__':
     (embedding_net, cls_head) = get_model(opt)
     
     if opt.train_weights:
-      weights = torch.ones(opt.task_number, device='cpu', requires_grad = True)
+      weights = torch.ones(opt.task_number, device='cuda', requires_grad = True)
       if opt.train_weights_layer:
         optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
                                     {'params': cls_head.parameters()},
@@ -516,7 +516,7 @@ if __name__ == '__main__':
                 loss_weights = []
                 for label in labels_query_class.reshape(-1):
                     loss_weights.append(weights[label])
-                loss_weights = torch.Tensor(loss_weights)
+                loss_weights = torch.Tensor(loss_weights).to(device='cuda')
                 res_one_hot = res_one_hot * loss_weights.reshape(-1, 1)
 
             log_prb = F.log_softmax(logit_query.reshape(-1, opt.train_way), dim=1)
