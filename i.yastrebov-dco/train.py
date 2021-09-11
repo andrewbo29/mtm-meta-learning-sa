@@ -44,7 +44,7 @@ def get_model(options):
         
     return (network, cls_head)
 
-
+def get_dataset(options):
     # Choose the learning datdset
     if options.dataset == 'miniImageNet':
         from torchmeta.datasets import MiniImagenet
