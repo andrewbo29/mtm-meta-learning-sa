@@ -16,7 +16,7 @@ def conv3x3(in_planes, out_planes, stride=1):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, drop_rate=0.0, drop_block=False, block_size=1):
+    def __init__(self, inplanes, planes, device, stride=1, downsample=None, drop_rate=0.0, drop_block=False, block_size=1):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -32,7 +32,8 @@ class BasicBlock(nn.Module):
         self.num_batches_tracked = 0
         self.drop_block = drop_block
         self.block_size = block_size
-        self.DropBlock = DropBlock(block_size=self.block_size)
+        self.device = device
+        self.DropBlock = DropBlock(self.block_size, self.device)
 
     def forward(self, x):
         self.num_batches_tracked += 1
@@ -70,9 +71,10 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
+    def __init__(self, block, device, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
         self.inplanes = 3
         super(ResNet, self).__init__()
+        self.device = device
 
         self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
         self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
@@ -102,7 +104,7 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, drop_rate, drop_block, block_size))
+        layers.append(block(self.inplanes, planes, self.device, stride, downsample, drop_rate, drop_block, block_size))
         self.inplanes = planes * block.expansion
 
         return nn.Sequential(*layers)
@@ -118,8 +120,8 @@ class ResNet(nn.Module):
         return x
 
 
-def resnet12(keep_prob=1.0, avg_pool=False, **kwargs):
+def resnet12(device, keep_prob=1.0, avg_pool=False, **kwargs):
     """Constructs a ResNet-12 model.
     """
-    model = ResNet(BasicBlock, keep_prob=keep_prob, avg_pool=avg_pool, **kwargs)
+    model = ResNet(BasicBlock, device, keep_prob=keep_prob, avg_pool=avg_pool, **kwargs)
     return model

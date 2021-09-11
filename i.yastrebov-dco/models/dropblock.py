@@ -5,10 +5,11 @@ from torch.distributions import Bernoulli
 
 
 class DropBlock(nn.Module):
-    def __init__(self, block_size):
+    def __init__(self, block_size, device):
         super(DropBlock, self).__init__()
 
         self.block_size = block_size
+        self.device = device
         #self.gamma = gamma
         #self.bernouli = Bernoulli(gamma)
 
@@ -19,7 +20,7 @@ class DropBlock(nn.Module):
             batch_size, channels, height, width = x.shape
             
             bernoulli = Bernoulli(gamma)
-            mask = bernoulli.sample((batch_size, channels, height - (self.block_size - 1), width - (self.block_size - 1))).cuda()
+            mask = bernoulli.sample((batch_size, channels, height - (self.block_size - 1), width - (self.block_size - 1))).to(self.device)
             #print((x.sample[-2], x.sample[-1]))
             block_mask = self._compute_block_mask(mask)
             #print (block_mask.size())
@@ -45,8 +46,8 @@ class DropBlock(nn.Module):
                 torch.arange(self.block_size).view(-1, 1).expand(self.block_size, self.block_size).reshape(-1), # - left_padding,
                 torch.arange(self.block_size).repeat(self.block_size), #- left_padding
             ]
-        ).t().cuda()
-        offsets = torch.cat((torch.zeros(self.block_size**2, 2).cuda().long(), offsets.long()), 1)
+        ).t().to(self.device)
+        offsets = torch.cat((torch.zeros(self.block_size**2, 2).to(self.device).long(), offsets.long()), 1)
         
         if nr_blocks > 0:
             non_zero_idxs = non_zero_idxs.repeat(self.block_size ** 2, 1)

@@ -18,7 +18,7 @@ def get_model(options):
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding().to(options.device)
     elif options.network == 'ResNet12':
-        network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device)
+        network = resnet12(options.device, avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device)
     elif options.network == 'ResNet18':
         network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18',
                                  pretrained = False, verbose = False).to(options.device)
