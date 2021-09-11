@@ -61,7 +61,7 @@ def ProtoNetHead(query, support, support_labels, n_way, n_shot, device, normaliz
     assert(query.size(0) == support.size(0) and query.size(2) == support.size(2))
     assert(n_support == n_way * n_shot)      # n_support must equal to n_way * n_shot
     
-    support_labels_one_hot = F.one_hot(support_labels.view(tasks_per_batch * n_support), n_way)
+    support_labels_one_hot = F.one_hot(support_labels.view(tasks_per_batch * n_support), n_way).type(torch.FloatTensor)
     support_labels_one_hot = support_labels_one_hot.view(tasks_per_batch, n_support, n_way)
     
     # From:
