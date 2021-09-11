@@ -589,7 +589,7 @@ if __name__ == '__main__':
                   f.write(base64.binascii.b2a_base64(weights_save).decode("ascii"))
                   f.flush()
                 
-            if loss_all is not 0:
+            if loss_all != 0:
                 train_losses.append(loss_all.item() / len(losses_all))
                 train_accuracies.append(np.mean([acc.item() for acc in acc_all]))
                 if opt.half_spsa or (i > opt.train_episode // 2) or (epoch <= opt.pretrain):
