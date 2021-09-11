@@ -35,9 +35,9 @@ def get_model(options):
         
     # Choose the classification head
     if options.head == 'Proto':
-        cls_head = ClassificationHead(base_learner='Proto').to(options.device)
+        cls_head = ClassificationHead(base_learner='Proto', device = options.device).to(options.device)
     elif options.head == 'SVM-CS':
-        cls_head = ClassificationHead(base_learner='SVM-CS').to(options.device)
+        cls_head = ClassificationHead(base_learner='SVM-CS', device = options.device).to(options.device)
     else:
         print ("Cannot recognize the base learner type")
         assert(False)

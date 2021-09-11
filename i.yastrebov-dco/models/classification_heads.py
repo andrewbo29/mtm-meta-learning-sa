@@ -1,9 +1,10 @@
 import os
 import sys
-
 import torch
-from torch.autograd import Variable
 import torch.nn as nn
+import torch.nn.functional as F
+
+from torch.autograd import Variable
 from qpth.qp import QPFunction
 
 
@@ -25,31 +26,13 @@ def computeGramMatrix(A, B):
     return torch.bmm(A, B.transpose(1,2))
 
 
-def one_hot(indices, depth):
-    """
-    Returns a one-hot tensor.
-    This is a PyTorch equivalent of Tensorflow's tf.one_hot.
-        
-    Parameters:
-      indices:  a (n_batch, m) Tensor or (m) Tensor.
-      depth: a scalar. Represents the depth of the one hot dimension.
-    Returns: a (n_batch, m, depth) Tensor or (m, depth) Tensor.
-    """
-
-    encoded_indicies = torch.zeros(indices.size() + torch.Size([depth])).cuda()
-    index = indices.view(indices.size()+torch.Size([1]))
-    encoded_indicies = encoded_indicies.scatter_(1,index,1)
-    
-    return encoded_indicies
-
-
 def batched_kronecker(matrix1, matrix2):
     matrix1_flatten = matrix1.reshape(matrix1.size()[0], -1)
     matrix2_flatten = matrix2.reshape(matrix2.size()[0], -1)
     return torch.bmm(matrix1_flatten.unsqueeze(2), matrix2_flatten.unsqueeze(1)).reshape([matrix1.size()[0]] + list(matrix1.size()[1:]) + list(matrix2.size()[1:])).permute([0, 1, 3, 2, 4]).reshape(matrix1.size(0), matrix1.size(1) * matrix2.size(1), matrix1.size(2) * matrix2.size(2))
 
 
-def ProtoNetHead(query, support, support_labels, n_way, n_shot, normalize=True):
+def ProtoNetHead(query, support, support_labels, n_way, n_shot, normalize=True, device):
     """
     Constructs the prototype representation of each class(=mean of support vectors of each class) and 
     returns the classification score (=L2 distance to each class prototype) on the query set.
@@ -78,7 +61,7 @@ def ProtoNetHead(query, support, support_labels, n_way, n_shot, normalize=True):
     assert(query.size(0) == support.size(0) and query.size(2) == support.size(2))
     assert(n_support == n_way * n_shot)      # n_support must equal to n_way * n_shot
     
-    support_labels_one_hot = one_hot(support_labels.view(tasks_per_batch * n_support), n_way)
+    support_labels_one_hot = F.one_hot(support_labels.view(tasks_per_batch * n_support), n_way)
     support_labels_one_hot = support_labels_one_hot.view(tasks_per_batch, n_support, n_way)
     
     # From:
@@ -108,7 +91,7 @@ def ProtoNetHead(query, support, support_labels, n_way, n_shot, normalize=True):
     return logits
 
 
-def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0.1, double_precision=False, maxIter=15):
+def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0.1, double_precision=False, maxIter=15, device):
     """
     Fits the support set with multi-class SVM and 
     returns the classification score on the query set.
@@ -150,12 +133,12 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
     #\alpha is an (n_support, n_way) matrix
     kernel_matrix = computeGramMatrix(support, support)
 
-    id_matrix_0 = torch.eye(n_way).expand(tasks_per_batch, n_way, n_way).cuda()
+    id_matrix_0 = torch.eye(n_way).expand(tasks_per_batch, n_way, n_way).to(device)
     block_kernel_matrix = batched_kronecker(kernel_matrix, id_matrix_0)
     #This seems to help avoid PSD error from the QP solver.
-    block_kernel_matrix += 1.0 * torch.eye(n_way*n_support).expand(tasks_per_batch, n_way*n_support, n_way*n_support).cuda()
+    block_kernel_matrix += 1.0 * torch.eye(n_way*n_support).expand(tasks_per_batch, n_way*n_support, n_way*n_support).to(device)
     
-    support_labels_one_hot = one_hot(support_labels.view(tasks_per_batch * n_support), n_way) # (tasks_per_batch * n_support, n_support)
+    support_labels_one_hot = F.one_hot(support_labels.view(tasks_per_batch * n_support), n_way) # (tasks_per_batch * n_support, n_support)
     support_labels_one_hot = support_labels_one_hot.view(tasks_per_batch, n_support, n_way)
     support_labels_one_hot = support_labels_one_hot.reshape(tasks_per_batch, n_support * n_way)
     
@@ -172,15 +155,15 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
     #print (C.size(), h.size())
     #This part is for the equality constraints:
     #\sum_m \alpha^m_i=0 \forall i
-    id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).cuda()
+    id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).to(device)
 
-    A = Variable(batched_kronecker(id_matrix_2, torch.ones(tasks_per_batch, 1, n_way).cuda()))
+    A = Variable(batched_kronecker(id_matrix_2, torch.ones(tasks_per_batch, 1, n_way).to(device)))
     b = Variable(torch.zeros(tasks_per_batch, n_support))
     #print (A.size(), b.size())
     if double_precision:
-        G, e, C, h, A, b = [x.double().cuda() for x in [G, e, C, h, A, b]]
+        G, e, C, h, A, b = [x.double().to(device) for x in [G, e, C, h, A, b]]
     else:
-        G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
+        G, e, C, h, A, b = [x.float().to(device) for x in [G, e, C, h, A, b]]
 
     # Solve the following QP to fit SVM:
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z
@@ -201,7 +184,7 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
 
 
 class ClassificationHead(nn.Module):
-    def __init__(self, base_learner = 'SVM-CS', enable_scale = True):
+    def __init__(self, base_learner = 'SVM-CS', enable_scale = True, device):
         super(ClassificationHead, self).__init__()
         if ('Proto' in base_learner):
             self.head = ProtoNetHead
@@ -214,9 +197,10 @@ class ClassificationHead(nn.Module):
         # Add a learnable scale
         self.enable_scale = enable_scale
         self.scale = nn.Parameter(torch.FloatTensor([1.0]))
+        self.device = device
         
     def forward(self, query, support, support_labels, n_way, n_shot, **kwargs):
         if self.enable_scale:
-            return self.scale * self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+            return self.scale * self.head(query, support, support_labels, n_way, n_shot, device=self.device, **kwargs)
         else:
-            return self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+            return self.head(query, support, support_labels, n_way, n_shot, device=self.device, **kwargs)
