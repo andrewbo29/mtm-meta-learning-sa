@@ -3,32 +3,34 @@ import argparse
 import numpy as np
 import os
 import torch
-import torch.nn.functional as F
 
 from models.classification_heads import ClassificationHead
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
-from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomHorizontalFlip, ToTensor
+from torchvision.transforms import Compose, Normalize, Resize, ToTensor
 from tqdm import tqdm
-from utils import check_dir, count_accuracy, log, set_gpu, Timer 
+from utils import check_dir, count_accuracy, log, set_gpu, Timer
 
 def get_model(options):
     # Choose the embedding network
     if options.network == 'ProtoNet':
-        network = ProtoNetEmbedding().cuda()
-    elif options.network == 'ResNet':
-        network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).cuda()
+        network = ProtoNetEmbedding().to(options.device)
+    elif options.network == 'ResNet12':
+        network = resnet12(avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device)
+    elif options.network == 'ResNet18':
+        network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18',
+                                 pretrained = False, verbose = False).to(options.device)
     else:
         print ("Cannot recognize the network type")
         assert(False)
         
     # Choose the classification head
     if options.head == 'Proto':
-        cls_head = ClassificationHead(base_learner='Proto').cuda()
+        cls_head = ClassificationHead(base_learner='Proto').to(options.device)
     elif options.head == 'SVM-CS':
-        cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
+        cls_head = ClassificationHead(base_learner='SVM-CS').to(options.device)
     else:
         print ("Cannot recognize the base learner type")
         assert(False)
@@ -41,86 +43,110 @@ def get_dataset(options):
         from torchmeta.datasets import MiniImagenet
         mean_pix = [x / 255 for x in [129.37731888, 124.10583864, 112.47758569]]
         std_pix = [x / 255 for x in [68.20947949, 65.43124043, 70.45866994]]
-        dataset_test = MiniImagenet(
-          "data",
-            num_classes_per_task = opt.way,
+        if options.network == 'ResNet18':
+            transform = Compose([Resize(224),
+                                 ToTensor(),
+                                 Normalize(mean = mean_pix,
+                                           std = std_pix),
+                                ]),
+        else:
             transform = Compose([ToTensor(),
                                  Normalize(mean = mean_pix,
                                            std = std_pix),
                                 ]),
-            target_transform = Categorical(num_classes = opt.way),
-            meta_test = True,
-            download = True)
+        if options.network == 'ResNet18':
+          dataset_test = MiniImagenet(
+            "data",
+            num_classes_per_task = options.way,
+            transform = Compose([Resize(224),
+                                 ToTensor(),
+                                 Normalize(mean = mean_pix,
+                                           std = std_pix),
+                                ]),
+            target_transform = Categorical(num_classes = options.way),
+            meta_val = True,
+            download = False) 
+        else:
+          dataset_test = MiniImagenet(
+            "data",
+            num_classes_per_task = options.way,
+            transform = Compose([ToTensor(),
+                                 Normalize(mean = mean_pix,
+                                           std = std_pix),
+                                ]),
+            target_transform = Categorical(num_classes = options.way),
+            meta_val = True,
+            download = False)
         dataset_test = ClassSplitter(dataset_test, shuffle = True,
-                                     num_train_per_class = opt.shot,
-                                     num_test_per_class = opt.query)
+                                     num_train_per_class = options.shot,
+                                     num_test_per_class = options.query)
         dataloader_test = BatchMetaDataLoader(
             dataset_test,
             batch_size = 1,
-            num_workers = opt.num_workers)
+            num_workers = options.num_workers)
     elif options.dataset == 'tieredImageNet':
         from torchmeta.datasets import TieredImagenet
         mean_pix = [x / 255 for x in [129.37731888, 124.10583864, 112.47758569]]
         std_pix = [x / 255 for x in [68.20947949, 65.43124043, 70.45866994]]
         dataset_test = TieredImagenet(
           "data",
-            num_classes_per_task = opt.way,
+            num_classes_per_task = options.way,
             transform = Compose([ToTensor(),
                                  Normalize(mean = mean_pix,
                                            std = std_pix),
                                 ]),
-            target_transform = Categorical(num_classes = opt.way),
+            target_transform = Categorical(num_classes = options.way),
             meta_test = True,
             download = True)
         dataset_test = ClassSplitter(dataset_test, shuffle = True,
-                                     num_train_per_class = opt.shot,
-                                     num_test_per_class = opt.query)
+                                     num_train_per_class = options.shot,
+                                     num_test_per_class = options.query)
         dataloader_test = BatchMetaDataLoader(
             dataset_test,
             batch_size = 1,
-            num_workers = opt.num_workers)
+            num_workers = options.num_workers)
     elif options.dataset == 'CIFAR_FS':
         from torchmeta.datasets import CIFARFS
         mean_pix = [x/255.0 for x in [129.37731888, 124.10583864, 112.47758569]]
         std_pix = [x/255.0 for x in [68.20947949, 65.43124043, 70.45866994]]
         dataset_test = CIFARFS(
           "data",
-            num_classes_per_task = opt.way,
+            num_classes_per_task = options.way,
             transform = Compose([ToTensor(),
                                  Normalize(mean = mean_pix,
                                            std = std_pix),
                                 ]),
-            target_transform = Categorical(num_classes = opt.way),
+            target_transform = Categorical(num_classes = options.way),
             meta_test = True,
             download = True)
         dataset_test = ClassSplitter(dataset_test, shuffle = True,
-                                     num_train_per_class = opt.shot,
-                                     num_test_per_class = opt.query)
+                                     num_train_per_class = options.shot,
+                                     num_test_per_class = options.query)
         dataloader_test = BatchMetaDataLoader(
             dataset_test,
             batch_size = 1,
-            num_workers = opt.num_workers)
+            num_workers = options.num_workers)
     elif options.dataset == 'FC100':
         from torchmeta.datasets import FC100
         mean_pix = [x/255.0 for x in [129.37731888, 124.10583864, 112.47758569]]
         std_pix = [x/255.0 for x in [68.20947949, 65.43124043, 70.45866994]]
         dataset_test = FC100(
             "data",
-            num_classes_per_task = opt.way,
+            num_classes_per_task = options.way,
             transform = Compose([ToTensor(),
                                  Normalize(mean = mean_pix,
                                            std = std_pix),
                                 ]),
-            target_transform = Categorical(num_classes = opt.way),
+            target_transform = Categorical(num_classes = options.way),
             meta_test = True,
             download = True)
         dataset_test = ClassSplitter(dataset_test, shuffle = True,
-                                     num_train_per_class = opt.shot,
-                                     num_test_per_class = opt.query)
+                                     num_train_per_class = options.shot,
+                                     num_test_per_class = options.query)
         dataloader_test = BatchMetaDataLoader(
             dataset_test,
             batch_size = 1,
-            num_workers = opt.num_workers)
+            num_workers = options.num_workers)
     else:
         print ("Cannot recognize the dataset type")
         assert(False)
@@ -129,7 +155,7 @@ def get_dataset(options):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', default='0')
+    parser.add_argument('--device', default='cuda')
     parser.add_argument('--num-workers', type=int, default=2,
                             help='number of cpu workers for loading data')
     parser.add_argument('--load', default='./experiments/best_model.pth',
@@ -142,12 +168,12 @@ if __name__ == '__main__':
                             help='number of support examples per training class')
     parser.add_argument('--query', type=int, default=15,
                             help='number of query examples per training class')
-    parser.add_argument('--network', type=str, default='ResNet',
-                            help='choose which embedding network to use. ResNet')
-    parser.add_argument('--head', type=str, default='SVM-CS',
-                            help='choose which classification head to use. Ridge, SVM')
+    parser.add_argument('--network', type=str, default='ProtoNet',
+                            help='choose which embedding network to use: ProtoNet, ResNet12, ResNet18')
+    parser.add_argument('--head', type=str, default='Proto',
+                            help='choose which classification head to use: Proto, SVM-CS')
     parser.add_argument('--dataset', type=str, default='miniImageNet',
-                            help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
+                            help='choose which classification head to use: miniImageNet, tieredImageNet, CIFAR_FS, FC100')
 
     opt = parser.parse_args()
     
@@ -176,10 +202,10 @@ if __name__ == '__main__':
        for batch in dataloader_test:
         data_support, labels_support = batch["train"]
         data_query, labels_query = batch["test"]
-        data_support = data_support.to(device='cuda')
-        labels_support = labels_support.to(device='cuda')
-        data_query = data_query.to(device='cuda')
-        labels_query = labels_query.to(device='cuda')
+        data_support = data_support.to(opt.device)
+        labels_support = labels_support.to(opt.device)
+        data_query = data_query.to(opt.device)
+        labels_query = labels_query.to(opt.device)
 
         n_support = opt.way * opt.shot
         n_query = opt.way * opt.query
@@ -202,10 +228,12 @@ if __name__ == '__main__':
         std = np.std(np.array(test_accuracies))
         ci95 = 1.96 * std / np.sqrt(i + 1)
         
+        i += 1
         if i % (opt.episode / 20) == 0:
             print('Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))
-        i += 1
-        pbar.update()
-        if i == opt.episode:
+        
+        if i == opt.episode + 1:
             break
+        else:
+            pbar.update()
