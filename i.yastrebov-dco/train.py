@@ -27,7 +27,7 @@ def get_model(options):
     elif options.network == 'ResNet12':
         network = resnet12(options.device, avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device)
     elif options.network == 'ResNet18':
-        network = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18',
+        network = torch.hub.load('pytorch/vision', 'resnet18',
                                  pretrained = False, verbose = False).to(options.device)
     else:
         print ("Cannot recognize the network type")
