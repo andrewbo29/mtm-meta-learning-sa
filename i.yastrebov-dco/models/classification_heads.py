@@ -32,7 +32,7 @@ def batched_kronecker(matrix1, matrix2):
     return torch.bmm(matrix1_flatten.unsqueeze(2), matrix2_flatten.unsqueeze(1)).reshape([matrix1.size()[0]] + list(matrix1.size()[1:]) + list(matrix2.size()[1:])).permute([0, 1, 3, 2, 4]).reshape(matrix1.size(0), matrix1.size(1) * matrix2.size(1), matrix1.size(2) * matrix2.size(2))
 
 
-def ProtoNetHead(query, support, support_labels, n_way, n_shot, normalize=True, device):
+def ProtoNetHead(query, support, support_labels, n_way, n_shot, device, normalize=True):
     """
     Constructs the prototype representation of each class(=mean of support vectors of each class) and 
     returns the classification score (=L2 distance to each class prototype) on the query set.
@@ -91,7 +91,7 @@ def ProtoNetHead(query, support, support_labels, n_way, n_shot, normalize=True, 
     return logits
 
 
-def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0.1, double_precision=False, maxIter=15, device):
+def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, device, C_reg=0.1, double_precision=False, maxIter=15):
     """
     Fits the support set with multi-class SVM and 
     returns the classification score on the query set.
@@ -184,7 +184,7 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
 
 
 class ClassificationHead(nn.Module):
-    def __init__(self, base_learner = 'SVM-CS', enable_scale = True, device):
+    def __init__(self, device, base_learner = 'SVM-CS', enable_scale = True):
         super(ClassificationHead, self).__init__()
         if ('Proto' in base_learner):
             self.head = ProtoNetHead
@@ -201,6 +201,6 @@ class ClassificationHead(nn.Module):
         
     def forward(self, query, support, support_labels, n_way, n_shot, **kwargs):
         if self.enable_scale:
-            return self.scale * self.head(query, support, support_labels, n_way, n_shot, device=self.device, **kwargs)
+            return self.scale * self.head(query, support, support_labels, n_way, n_shot, self.device, **kwargs)
         else:
-            return self.head(query, support, support_labels, n_way, n_shot, device=self.device, **kwargs)
+            return self.head(query, support, support_labels, n_way, n_shot, self.device, **kwargs)
