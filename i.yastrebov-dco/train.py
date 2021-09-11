@@ -18,7 +18,7 @@ from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomResizedCrop, RandomHorizontalFlip, Resize, ToTensor
 from tqdm import tqdm
-from utils import check_dir, count_accuracy, log, set_gpu, Timer 
+from utils import check_dir, count_accuracy, log, Timer 
 
 def get_model(options):
     # Choose the embedding network
@@ -432,7 +432,6 @@ if __name__ == '__main__':
     
     (dataloader_train, dataloader_val) = get_dataset(opt)
 
-    set_gpu(opt.gpu)
     check_dir('./experiments/')
     check_dir(opt.save_path)
     

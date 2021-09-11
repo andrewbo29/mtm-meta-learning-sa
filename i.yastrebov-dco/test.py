@@ -11,7 +11,7 @@ from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import Compose, Normalize, Resize, ToTensor
 from tqdm import tqdm
-from utils import check_dir, count_accuracy, log, set_gpu, Timer
+from utils import check_dir, count_accuracy, log, Timer
 
 def get_model(options):
     # Choose the embedding network
@@ -178,8 +178,6 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     
     dataloader_test = get_dataset(opt)
-
-    set_gpu(opt.gpu)
     
     log_file_path = os.path.join(os.path.dirname(opt.load), "test_log.txt")
     log(log_file_path, str(vars(opt)))
