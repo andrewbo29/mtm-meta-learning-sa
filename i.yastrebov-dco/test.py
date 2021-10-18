@@ -12,20 +12,21 @@ from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import Compose, Normalize, Resize, ToTensor
 from tqdm import tqdm
 from utils import check_dir, count_accuracy, log, Timer
+from torchvision.models.resnet import resnet18
 
 def get_model(options):
     # Choose the embedding network
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding().to(options.device)
     elif options.network == 'ResNet12':
-        network = resnet12(options.device, avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device)
+        network = torch.nn.DataParallel(resnet12(options.device, avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device))
     elif options.network == 'ResNet18':
-        network = torch.hub.load('pytorch/vision', 'resnet18',
-                                 pretrained = False, verbose = False).to(options.device)
+        # network = torch.hub.load('pytorch/vision', 'resnet18', pretrained = False, verbose = False).to(options.device)
+        network = torch.nn.DataParallel(resnet18(pretrained=False).to(options.device))
     else:
         print ("Cannot recognize the network type")
         assert(False)
-        
+
     # Choose the classification head
     if options.head == 'Proto':
         cls_head = ClassificationHead(options.device, base_learner='Proto').to(options.device)
@@ -34,7 +35,7 @@ def get_model(options):
     else:
         print ("Cannot recognize the base learner type")
         assert(False)
-        
+
     return (network, cls_head)
 
 def get_dataset(options):
@@ -65,7 +66,7 @@ def get_dataset(options):
                                 ]),
             target_transform = Categorical(num_classes = options.way),
             meta_val = True,
-            download = False) 
+            download = False)
         else:
           dataset_test = MiniImagenet(
             "data",
@@ -150,7 +151,7 @@ def get_dataset(options):
     else:
         print ("Cannot recognize the dataset type")
         assert(False)
-        
+
     return dataloader_test
 
 if __name__ == '__main__':
@@ -176,22 +177,22 @@ if __name__ == '__main__':
                             help='choose which classification head to use: miniImageNet, tieredImageNet, CIFAR_FS, FC100')
 
     opt = parser.parse_args()
-    
+
     dataloader_test = get_dataset(opt)
-    
+
     log_file_path = os.path.join(os.path.dirname(opt.load), "test_log.txt")
     log(log_file_path, str(vars(opt)))
 
     # Define the models
     (embedding_net, cls_head) = get_model(opt)
-    
+
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)
     embedding_net.load_state_dict(saved_models['embedding'])
     embedding_net.eval()
     cls_head.load_state_dict(saved_models['head'])
     cls_head.eval()
-    
+
     # Evaluate on test set
     test_accuracies = []
     with tqdm(total = opt.episode, initial = 1) as pbar:
@@ -207,10 +208,10 @@ if __name__ == '__main__':
 
         n_support = opt.way * opt.shot
         n_query = opt.way * opt.query
-                
+
         emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])))
         emb_support = emb_support.reshape(1, n_support, -1)
-        
+
         emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         emb_query = emb_query.reshape(1, n_query, -1)
 
@@ -221,16 +222,16 @@ if __name__ == '__main__':
 
         acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1))
         test_accuracies.append(acc.item())
-        
+
         avg = np.mean(np.array(test_accuracies))
         std = np.std(np.array(test_accuracies))
         ci95 = 1.96 * std / np.sqrt(i + 1)
-        
+
         i += 1
         if i % (opt.episode / 20) == 0:
             print('Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))
-        
+
         if i == opt.episode + 1:
             break
         else:

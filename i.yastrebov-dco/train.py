@@ -5,6 +5,7 @@ import numpy as np
 import os
 import torch
 import torch.nn.functional as F
+from torchvision.models.resnet import resnet18
 
 from dataloaders import BatchMetaDataLoaderWithLabels
 from itertools import combinations
@@ -18,21 +19,21 @@ from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomResizedCrop, RandomHorizontalFlip, Resize, ToTensor
 from tqdm import tqdm
-from utils import check_dir, count_accuracy, log, Timer 
+from utils import check_dir, count_accuracy, log, Timer
 
 def get_model(options):
     # Choose the embedding network
     if options.network == 'ProtoNet':
         network = ProtoNetEmbedding().to(options.device)
     elif options.network == 'ResNet12':
-        network = resnet12(options.device, avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device)
+        network = torch.nn.DataParallel(resnet12(options.device, avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device))
     elif options.network == 'ResNet18':
-        network = torch.hub.load('pytorch/vision', 'resnet18',
-                                 pretrained = False, verbose = False).to(options.device)
+       #  network = torch.hub.load('pytorch/vision', 'resnet18', pretrained = False, verbose = False).to(options.device)
+       network = torch.nn.DataParallel(resnet18(pretrained=False).to(options.device))
     else:
         print ("Cannot recognize the network type")
         assert(False)
-        
+
     # Choose the classification head
     if options.head == 'Proto':
         cls_head = ClassificationHead(options.device, base_learner='Proto').to(options.device)
@@ -41,7 +42,7 @@ def get_model(options):
     else:
         print ("Cannot recognize the base learner type")
         assert(False)
-        
+
     return (network, cls_head)
 
 def get_dataset(options):
@@ -87,7 +88,7 @@ def get_dataset(options):
                                 ]),
             target_transform = Categorical(num_classes = options.test_way),
             meta_val = True,
-            download = False) 
+            download = False)
         else:
           dataset_val = MiniImagenet(
             "data",
@@ -362,7 +363,7 @@ def get_dataset(options):
     else:
         print ("Cannot recognize the dataset type")
         assert(False)
-        
+
     return (dataloader_train, dataloader_val)
 
 if __name__ == '__main__':
@@ -427,45 +428,46 @@ if __name__ == '__main__':
                             help='train weights like a layer with spsa loss')
     parser.add_argument('--train-weights-opt', action='store_true',
                             help='train weights with separate optimizer')
+    parser.add_argument('--weight_decay', type=float, default=5e-4)
 
     opt = parser.parse_args()
-    
+
     (dataloader_train, dataloader_val) = get_dataset(opt)
 
     check_dir('./experiments/')
     check_dir(opt.save_path)
-    
+
     log_file_path = os.path.join(opt.save_path, "train_log.txt")
     log(log_file_path, str(vars(opt)))
 
     weight_file_path = os.path.join(opt.save_path, "weight_log.txt")
 
     (embedding_net, cls_head) = get_model(opt)
-    
+
     if opt.train_weights:
       weights = torch.ones(opt.task_number, device=opt.device, requires_grad = True)
       if opt.train_weights_layer:
-        optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
+        optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                     {'params': cls_head.parameters()},
                                     {'params': weights}], lr=0.1,
                                     momentum=0.9, weight_decay=5e-4, nesterov=True)
       elif opt.train_weights_opt:
-        optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
+        optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                    {'params': cls_head.parameters()}], lr=0.1,
                                    momentum=0.9, weight_decay=5e-4, nesterov=True)
         optimizer1 = torch.optim.Adam([{'params': weights}], lr=1e-3)
     elif opt.coarse_weights:
       weights = np.ones(20)
       loss_hist = torch.zeros(20, device=opt.device)
-      optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
+      optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                    {'params': cls_head.parameters()}], lr=0.1,
                                    momentum=0.9, weight_decay=5e-4, nesterov=True)
     else:
       weights = np.array([1 / opt.task_number for _ in range(opt.task_number)])
-      optimizer = torch.optim.SGD([{'params': embedding_net.parameters()}, 
+      optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                    {'params': cls_head.parameters()}], lr=0.1,
-                                   momentum=0.9, weight_decay=5e-4, nesterov=True)
-    
+                                   momentum=0.9, weight_decay=opt.weight_decay, nesterov=True)
+
     lambda_epoch = lambda e: (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) if e < opt.pretrain or opt.train_weights else (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) / 10
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
 
@@ -473,32 +475,32 @@ if __name__ == '__main__':
 
     timer = Timer()
     x_entropy = torch.nn.CrossEntropyLoss()
-    
+
     i_cum = 0
-    
+
     if (opt.task_number > 1) and not opt.train_weights:
         spsa_start = opt.pretrain
     else:
         spsa_start = opt.num_epoch + 1
-    
+
     for epoch in range(1, opt.num_epoch + 1):
         # Train on the training split
         losses_all = []
         acc_all = []
-        
+
         losses_2n_1 = []
         losses_2n = []
-        
+
         # Fetch the current epoch's learning rate
         epoch_learning_rate = 0.1
         for param_group in optimizer.param_groups:
             epoch_learning_rate = param_group['lr']
-            
+
         log(log_file_path, 'Train Epoch: {}\tLearning Rate: {:.4f}'.format(
                             epoch, epoch_learning_rate))
-        
+
         _, _ = [x.train() for x in (embedding_net, cls_head)]
-        
+
         train_accuracies = []
         train_losses = []
 
@@ -524,10 +526,10 @@ if __name__ == '__main__':
 
             emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])))
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
-            
+
             emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
             emb_query = emb_query.reshape(opt.episodes_per_batch, train_n_query, -1)
-            
+
             logit_query = cls_head(emb_query, emb_support, labels_support, opt.train_way, opt.train_shot)
 
             res_one_hot = F.one_hot(labels_query.reshape(-1), opt.train_way)
@@ -544,12 +546,12 @@ if __name__ == '__main__':
                 for pair in zip(labels_query_class.reshape(-1), loss):
                     loss_hist[pair[0]] += pair[1]
             loss = loss.mean()
-            
+
             acc = count_accuracy(logit_query.reshape(-1, opt.train_way), labels_query.reshape(-1))
-            
+
             losses_all.append(loss)
             acc_all.append(acc)
-            
+
             loss_all = 0
             if (opt.task_number == 1) or (epoch <= opt.pretrain):
                 loss_all = loss
@@ -563,10 +565,10 @@ if __name__ == '__main__':
                     losses_2n = losses_all
                 if opt.train_weights & (epoch >= opt.pretrain + 1):
                     loss_all = torch.tensor(0, dtype = torch.float).to(opt.device)
-                    for j, loss_val in enumerate(losses_all):                    
+                    for j, loss_val in enumerate(losses_all):
                         loss_all += (1 / (weights[j] ** 2) * loss_val + torch.log(weights[j] ** 2))
                 else:
-                    for j, loss_val in enumerate(losses_all):                    
+                    for j, loss_val in enumerate(losses_all):
                         loss_all += (1 / (weights[j] ** 2) * loss_val + np.log(weights[j] ** 2))
                 if (epoch > spsa_start) and not opt.train_weights:
                   s += 1
@@ -588,7 +590,7 @@ if __name__ == '__main__':
                     weights_save = weights
                   f.write(base64.binascii.b2a_base64(weights_save).decode("ascii"))
                   f.flush()
-                
+
             if loss_all != 0:
                 train_losses.append(loss_all.item() / len(losses_all))
                 train_accuracies.append(np.mean([acc.item() for acc in acc_all]))
@@ -610,7 +612,7 @@ if __name__ == '__main__':
                 train_acc_avg = np.mean(np.array(train_accuracies))
                 log(log_file_path, 'Train Epoch: {}\tBatch: [{}/{}]\tLoss: {:.4f}\tAccuracy: {:.2f} % ({:.2f} %)'.format(
                             epoch, i, opt.train_episode, train_losses[-1], train_acc_avg, train_accuracies[-1]))
-            
+
             i += 1
 
             if i == opt.train_episode + 1:
@@ -623,7 +625,7 @@ if __name__ == '__main__':
                 break
             else:
                 pbar.update()
-          
+
           if opt.train_weights == opt.epoch_spsa:
             if not opt.coarse_weights:
                 weights = weights / np.sum(weights)
@@ -634,7 +636,7 @@ if __name__ == '__main__':
 
         val_accuracies = []
         val_losses = []
-        
+
         with tqdm(total = opt.val_episode, initial = 1) as pbar:
           i = 1
           while i < opt.val_episode:
@@ -661,14 +663,14 @@ if __name__ == '__main__':
 
             val_accuracies.append(acc.item())
             val_losses.append(loss.item())
-            
+
             i += 1
-            
+
             if i == opt.val_episode + 1:
                 break
             else:
                 pbar.update()
-            
+
         val_acc_avg = np.mean(np.array(val_accuracies))
         val_acc_ci95 = 1.96 * np.std(np.array(val_accuracies)) / np.sqrt(opt.val_episode)
 
