@@ -5,21 +5,21 @@ import numpy as np
 import os
 import torch
 import torch.nn.functional as F
-from torchvision.models.resnet import resnet18
 
 from dataloaders import BatchMetaDataLoaderWithLabels
 from itertools import combinations
 from models.classification_heads import ClassificationHead
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
-from optimize import optimize
-from optimize import optimize_weights_track
+from optimize import optimize, optimize_weights_track
 from scipy.stats import rankdata
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
+from torchvision.models.resnet import resnet18
 from torchvision.transforms import ColorJitter, Compose, Normalize, RandomCrop, RandomResizedCrop, RandomHorizontalFlip, Resize, ToTensor
 from tqdm import tqdm
 from utils import check_dir, count_accuracy, log, Timer
+
 
 def get_model(options):
     # Choose the embedding network

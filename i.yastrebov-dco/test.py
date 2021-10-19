@@ -9,10 +9,11 @@ from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
 from torchmeta.transforms import Categorical, ClassSplitter
 from torchmeta.utils.data import BatchMetaDataLoader
+from torchvision.models.resnet import resnet18
 from torchvision.transforms import Compose, Normalize, Resize, ToTensor
 from tqdm import tqdm
-from utils import check_dir, count_accuracy, log, Timer
-from torchvision.models.resnet import resnet18
+from utils import check_dir, count_accuracy, log
+
 
 def get_model(options):
     # Choose the embedding network

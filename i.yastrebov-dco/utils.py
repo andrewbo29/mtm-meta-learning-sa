@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
-import pprint
 import time
 import torch
 
-def set_gpu(x):
-    os.environ['CUDA_VISIBLE_DEVICES'] = x
-    print('using gpu:', x)
 
 def check_dir(path):
     '''

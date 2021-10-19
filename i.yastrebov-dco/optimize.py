@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
+
 spsa_gamma = 1. / 6
 spsa_alpha = lambda x: 0.25 / (x ** spsa_gamma)
 spsa_beta = lambda x: 15. / (x ** (spsa_gamma / 4))
