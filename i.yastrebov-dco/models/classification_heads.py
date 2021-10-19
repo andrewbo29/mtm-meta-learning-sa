@@ -99,7 +99,10 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, device,
     On the Algorithmic Implementation of Multiclass Kernel-based Vector Machines
     (Crammer and Singer, Journal of Machine Learning Research 2001).
 
-    This model is the classification head that we use for the final version.
+    This model is the classification head described in:
+    Meta-Learning with Differentiable Convex Optimization
+    (Lee et al., CVPR 2019).
+    
     Parameters:
       query:  a (tasks_per_batch, n_query, d) Tensor.
       support:  a (tasks_per_batch, n_support, d) Tensor.
