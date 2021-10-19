@@ -1,5 +1,6 @@
-import torch.nn as nn
+# -*- coding: utf-8 -*-
 import math
+import torch.nn as nn
 
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, retain_activation=True):

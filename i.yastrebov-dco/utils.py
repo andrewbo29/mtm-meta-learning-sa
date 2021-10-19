@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 import os
-import time
 import pprint
+import time
 import torch
 
 def set_gpu(x):

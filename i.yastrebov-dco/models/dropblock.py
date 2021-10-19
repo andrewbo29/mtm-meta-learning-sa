@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 import torch
 import torch.nn.functional as F
-from torch import nn
+
 from torch.distributions import Bernoulli
+from torch import nn
 
 
 class DropBlock(nn.Module):

@@ -1,6 +1,8 @@
-import torch.nn as nn
+# -*- coding: utf-8 -*-
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
+
 from models.dropblock import DropBlock
 
 # This ResNet network was designed following the practice of the following papers:
