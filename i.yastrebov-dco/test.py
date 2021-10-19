@@ -22,7 +22,6 @@ def get_model(options):
     elif options.network == 'ResNet12':
         network = torch.nn.DataParallel(resnet12(options.device, avg_pool = False, drop_rate = .1, dropblock_size = 2).to(options.device))
     elif options.network == 'ResNet18':
-        # network = torch.hub.load('pytorch/vision', 'resnet18', pretrained = False, verbose = False).to(options.device)
         network = torch.nn.DataParallel(resnet18(pretrained=False).to(options.device))
     else:
         print ("Cannot recognize the network type")
@@ -216,7 +215,7 @@ if __name__ == '__main__':
         emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         emb_query = emb_query.reshape(1, n_query, -1)
 
-        if opt.head in ['SVM-CS', 'SVM-He', 'SVM-WW']:
+        if opt.head == 'SVM':
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot, maxIter=3)
         else:
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)

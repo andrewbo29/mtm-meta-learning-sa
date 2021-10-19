@@ -143,7 +143,6 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, device,
     
     G = block_kernel_matrix
     e = -1.0 * support_labels_one_hot
-    #print (G.size())
     #This part is for the inequality constraints:
     #\alpha^m_i <= C^m_i \forall m,i
     #where C^m_i = C if m  = y_i,
@@ -151,14 +150,12 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, device,
     id_matrix_1 = torch.eye(n_way * n_support).expand(tasks_per_batch, n_way * n_support, n_way * n_support)
     C = Variable(id_matrix_1)
     h = Variable(C_reg * support_labels_one_hot)
-    #print (C.size(), h.size())
     #This part is for the equality constraints:
     #\sum_m \alpha^m_i=0 \forall i
     id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).to(device)
 
     A = Variable(batched_kronecker(id_matrix_2, torch.ones(tasks_per_batch, 1, n_way).to(device)))
     b = Variable(torch.zeros(tasks_per_batch, n_support))
-    #print (A.size(), b.size())
     if double_precision:
         G, e, C, h, A, b = [x.double().to(device) for x in [G, e, C, h, A, b]]
     else:

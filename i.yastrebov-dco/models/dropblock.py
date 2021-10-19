@@ -12,8 +12,6 @@ class DropBlock(nn.Module):
 
         self.block_size = block_size
         self.device = device
-        #self.gamma = gamma
-        #self.bernouli = Bernoulli(gamma)
 
     def forward(self, x, gamma):
         # shape: (bsize, channels, height, width)
@@ -23,10 +21,7 @@ class DropBlock(nn.Module):
             
             bernoulli = Bernoulli(gamma)
             mask = bernoulli.sample((batch_size, channels, height - (self.block_size - 1), width - (self.block_size - 1))).to(self.device)
-            #print((x.sample[-2], x.sample[-1]))
             block_mask = self._compute_block_mask(mask)
-            #print (block_mask.size())
-            #print (x.size())
             countM = block_mask.size()[0] * block_mask.size()[1] * block_mask.size()[2] * block_mask.size()[3]
             count_ones = block_mask.sum()
 
@@ -39,7 +34,6 @@ class DropBlock(nn.Module):
         right_padding = int(self.block_size / 2)
         
         batch_size, channels, height, width = mask.shape
-        #print ("mask", mask[0][0])
         non_zero_idxs = mask.nonzero(as_tuple = False)
         nr_blocks = non_zero_idxs.shape[0]
 
@@ -57,11 +51,10 @@ class DropBlock(nn.Module):
             offsets = offsets.long()
 
             block_idxs = non_zero_idxs + offsets
-            #block_idxs += left_padding
             padded_mask = F.pad(mask, (left_padding, right_padding, left_padding, right_padding))
             padded_mask[block_idxs[:, 0], block_idxs[:, 1], block_idxs[:, 2], block_idxs[:, 3]] = 1.
         else:
             padded_mask = F.pad(mask, (left_padding, right_padding, left_padding, right_padding))
             
-        block_mask = 1 - padded_mask#[:height, :width]
+        block_mask = 1 - padded_mask #[:height, :width]
         return block_mask
