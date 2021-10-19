@@ -183,11 +183,11 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, device,
 
 
 class ClassificationHead(nn.Module):
-    def __init__(self, device, base_learner = 'SVM-CS', enable_scale = True):
+    def __init__(self, device, base_learner = 'Proto', enable_scale = True):
         super(ClassificationHead, self).__init__()
         if ('Proto' in base_learner):
             self.head = ProtoNetHead
-        elif ('SVM-CS' in base_learner):
+        elif ('SVM' in base_learner):
             self.head = MetaOptNetHead_SVM_CS
         else:
             print ("Cannot recognize the base learner type")
