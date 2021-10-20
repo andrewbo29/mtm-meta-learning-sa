@@ -40,4 +40,4 @@ Our code uses some dataloaders and models implementations from [**Torchmeta**](h
 
 Code in protonet folder is based on the implementation of [**MetaOptNet**](https://github.com/kjunelee/MetaOptNet). All .py files in this folder except for dataloaders.py and optimize.py were adopted from this implementation and modified afterwards. A copy of Apache License, Version 2.0 is available in protonet folder.
 
-Code in maml folder is based on the extended implementation from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta), namely [**pytorch-maml**](https://github.com/tristandeleu/pytorch-maml). We follow the MIT license, which is available in the MAML folder.
+Code in maml folder is based on the extended implementation from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta) and [**pytorch-maml**](https://github.com/tristandeleu/pytorch-maml). The code has been updated so that baseline scores more closely follow those of the original MAML paper, additional dataset support has been introduced. We follow the MIT license, which is available in the MAML folder.
