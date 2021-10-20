@@ -6,8 +6,24 @@ This repository contains the code for the paper
 ![Method pipeline](https://github.com/andrewbo29/mtm-meta-learning-sa/blob/master/mtm_pipeline.png)
 
 ## Dependencies
+This code has been tested on Ubuntu 16.04 with Python 3.8 and PyTorch 1.7.
+
+To install the required dependencies:
+```
+pip install -r requirements.txt
+```
 
 ## Usage
+### MAML
+### Prototypical Networks
+To train with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
+```
+python protonet/train.py --network ResNet12 --tracking --train-shot 1 --val-shot 1
+```
+To test with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
+```
+python protonet/test.py --network ResNet12 --shot 1
+```
 
 
 ## Acknowledgments
