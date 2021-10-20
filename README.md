@@ -1,7 +1,7 @@
 # Multi-Task Meta-Learning Modification with Stochastic Approximation
 
 This repository contains the code for the paper 
-Multi-Task Meta-Learning Modification with Stochastic Approximation
+"Multi-Task Meta-Learning Modification with Stochastic Approximation"
 
 ![Method pipeline](https://github.com/andrewbo29/mtm-meta-learning-sa/blob/master/mtm_pipeline.png)
 
