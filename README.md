@@ -6,7 +6,7 @@ This repository contains the code for the paper<br/>
 ![Method pipeline](https://github.com/andrewbo29/mtm-meta-learning-sa/blob/master/mtm_pipeline.png)
 
 ## Dependencies
-This code has been tested on Ubuntu 16.04 with Python 3.8 and PyTorch 1.7.
+This code has been tested on Ubuntu 16.04 with Python 3.8 and PyTorch 1.8.
 
 To install the required dependencies:
 ```
