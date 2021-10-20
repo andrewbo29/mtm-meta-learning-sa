@@ -19,6 +19,8 @@ To reproduce the results on benchmarks described in our article, use the followi
 ### MAML
 Multi-task modification (MTM) for Model-Agnostic Meta-Learning (MAML) ([Finn et al., 2017](https://arxiv.org/abs/1703.03400)).
 
+As
+
 ### Prototypical Networks
 Multi-task modification (MTM) for Prototypical Networks (ProtoNet) ([Snell et al., 2017](https://arxiv.org/abs/1703.05175)).
 
@@ -38,4 +40,4 @@ Our code uses some dataloaders and models implementations from [**Torchmeta**](h
 
 Code in protonet folder is based on the implementation of [**MetaOptNet**](https://github.com/kjunelee/MetaOptNet). All .py files in this folder except for dataloaders.py and optimize.py were adopted from this implementation and modified afterwards. A copy of Apache License, Version 2.0 is available in protonet folder.
 
-Code in maml folder is based on the implementation from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta).
+Code in maml folder is based on the extended implementation from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta), namely [**pytorch-maml**](https://github.com/tristandeleu/pytorch-maml). We follow the MIT license, which is available in the MAML folder.
