@@ -24,11 +24,11 @@ Multi-task modification (MTM) for Prototypical Networks (ProtoNet) ([Snell et al
 
 To train ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
 ```
-python protonet/train.py --network ResNet12 --tracking --train-shot 1 --val-shot 1
+python protonet/train.py --network ResNet12 --tracking --train-shot 1 --train-way 5 --val-shot 1 --val-way 5
 ```
 To test ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
 ```
-python protonet/test.py --network ResNet12 --shot 1
+python protonet/test.py --network ResNet12 --shot 1 --way 5
 ```
 
 
