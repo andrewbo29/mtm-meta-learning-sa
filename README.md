@@ -203,11 +203,35 @@ Multi-task modification (MTM) for Prototypical Networks (ProtoNet) ([Snell et al
 
 To train ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
 ```
-python protonet/train.py --network ResNet12 --tracking --train-shot 1 --train-way 5 --val-shot 1 --val-way 5
+python protonet/train.py --dataset miniImageNet --network ResNet12 --tracking --train-shot 1 --train-way 5 --val-shot 1 --val-way 5
 ```
 To test ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
 ```
-python protonet/test.py --network ResNet12 --shot 1 --way 5
+python protonet/test.py --dataset miniImageNet --network ResNet12 --shot 1 --way 5
+```
+To train ProtoNet MTM Backprop with 64-64-64-64 backbone on CIFAR-FS 1-shot 2-way benchmark:
+```
+python protonet/train.py --dataset CIFAR_FS --train-weights --train-weights-layer --train-shot 1 --train-way 2 --val-shot 1 --val-way 2
+```
+To test ProtoNet MTM Backprop with 64-64-64-64 backbone on CIFAR-FS 1-shot 5-way benchmark:
+```
+python protonet/test.py --dataset CIFAR_FS --shot 1 --way 2
+```
+To train ProtoNet MTM Inner First-Order with 64-64-64-64 backbone on FC100 10-shot 5-way benchmark:
+```
+python protonet/train.py --dataset FC100 --train-weights --train-weights-opt --train-shot 10 --train-way 5 --val-shot 10 --val-way 5
+```
+To test ProtoNet MTM Inner First-Order with 64-64-64-64 backbone on FC100 10-shot 5-way benchmark:
+```
+python protonet/test.py --dataset FC100 --shot 10 --way 5
+```
+To train ProtoNet MTM SPSA with 64-64-64-64 backbone on tieredImageNet 5-shot 2-way benchmark:
+```
+python protonet/train.py --dataset tieredImageNet --train-shot 5 --train-way 2 --val-shot 5 --val-way 2
+```
+To test ProtoNet MTM SPSA with 64-64-64-64 backbone on tieredImageNet 5-shot 2-way benchmark:
+```
+python protonet/test.py --dataset tieredImageNet --shot 5 --way 2
 ```
 
 
