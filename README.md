@@ -117,7 +117,7 @@ python train.py ./datasets/ \
 python train.py ./datasets/ \
     --run-name fc100-mtm-spsa-coarse \
     --load "./results/reproduced-fc100/model.th" \
-    --dataset cifarfs \
+    --dataset fc100 \
     --num-ways 5 \
     --num-shots 5 \
     --num-steps 5 \
