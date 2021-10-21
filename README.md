@@ -14,7 +14,7 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-To reproduce the results on benchmarks described in our article, use the following scripts. To vary types of the experiments, change the parameters of the scripts responsible for shot and way (e.g. 1-shot 5-way or 5-shot 2-way).
+To reproduce the results on benchmarks described in our article, use the following scripts. To vary types of the experiments, change the parameters of the scripts responsible for benchmark dataset, shot and way (e.g. miniImageNet 1-shot 5-way or CIFAR-FS 5-shot 2-way).
 
 ### MAML
 Multi-task modification (MTM) for Model-Agnostic Meta-Learning (MAML) ([Finn et al., 2017](https://arxiv.org/abs/1703.03400)).
@@ -23,7 +23,7 @@ As we have described in the paper, MAML MTM-SPSA is trained on top of the reprod
 
 **miniImageNet (reproduced 1-shot 2-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name reproduced-miniimagenet \
     --dataset miniimagenet \
     --num-ways 2 \
@@ -40,7 +40,7 @@ python train.py ./datasets/ \
 
 **miniImageNet (MTM SPSA-Track 1-shot 2-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name mini-imagenet-mtm-spsa-track \
     --load "./results/reproduced-miniimagenet/model.th" \
     --dataset miniimagenet \
@@ -60,7 +60,7 @@ python train.py ./datasets/ \
 
 **tieredImageNet (reproduced 1-shot 2-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name reproduced-tieredimagenet \
     --dataset tieredimagenet \
     --num-ways 2 \
@@ -77,7 +77,7 @@ python train.py ./datasets/ \
 
 **tieredImageNet (MTM SPSA 1-shot 2-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name tiered-imagenet-mtm-spsa \
     --load "./results/reproduced-tieredimagenet/model.th" \
     --dataset tieredimagenet \
@@ -97,7 +97,7 @@ python train.py ./datasets/ \
 
 **FC100 (reproduced 5-shot 5-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name reproduced-fc100 \
     --dataset fc100 \
     --num-ways 5 \
@@ -114,7 +114,7 @@ python train.py ./datasets/ \
 
 **FC100 (MTM SPSA-Coarse 5-shot 5-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name fc100-mtm-spsa-coarse \
     --load "./results/reproduced-fc100/model.th" \
     --dataset fc100 \
@@ -133,7 +133,7 @@ python train.py ./datasets/ \
 
 **CIFAR-FS (reproduced 1-shot 5-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name reproduced-cifar \
     --dataset cifarfs \
     --num-ways 5 \
@@ -150,7 +150,7 @@ python train.py ./datasets/ \
 
 **CIFAR-FS (MTM Inner First-Order 1-shot 5-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name cifar-mtm-inner-first-order \
     --load "./results/reproduced-cifar/model.th" \
     --dataset cifarfs \
@@ -170,7 +170,7 @@ python train.py ./datasets/ \
 
 **CIFAR-FS (MTM Backprop 5-shot 5-way):**
 ```
-python train.py ./datasets/ \
+python maml/train.py ./datasets/ \
     --run-name cifar-mtm-backprop \
     --load "./results/reproduced-cifar-5shot-5way/model.th" \
     --dataset cifarfs \
@@ -189,12 +189,12 @@ python train.py ./datasets/ \
 
 **To test** any of the above-described runs execute:
 ```
-python test.py ./results/path-to-config/config.json --num-steps 10 --use-cuda
+python maml/test.py ./results/path-to-config/config.json --num-steps 10 --use-cuda
 ```
 
 For instance, **to test miniImageNet (MTM SPSA-Track)** run the following:
 ```
-python test.py ./results/mini-imagenet-mtm-spsa-track/config.json --num-steps 10 --use-cuda
+python maml/test.py ./results/mini-imagenet-mtm-spsa-track/config.json --num-steps 10 --use-cuda
 ```
 
 
