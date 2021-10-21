@@ -380,7 +380,7 @@ if __name__ == '__main__':
     parser.add_argument('--train-way', type=int, default=5,
                             help='number of classes in one training episode')
     parser.add_argument('--val-way', type=int, default=5,
-                            help='number of classes in one test (or validation) episode')
+                            help='number of classes in one validation episode')
     parser.add_argument('--save-path', default='./experiments')
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--num-workers', type=int, default=2,
