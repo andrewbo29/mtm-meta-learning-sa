@@ -73,24 +73,24 @@ def get_dataset(options):
         if options.network == 'ResNet18':
           dataset_val = MiniImagenet(
             "data",
-            num_classes_per_task = options.test_way,
+            num_classes_per_task = options.val_way,
             transform = Compose([Resize(224),
                                  ToTensor(),
                                  Normalize(mean = mean_pix,
                                            std = std_pix),
                                 ]),
-            target_transform = Categorical(num_classes = options.test_way),
+            target_transform = Categorical(num_classes = options.val_way),
             meta_val = True,
             download = False)
         else:
           dataset_val = MiniImagenet(
             "data",
-            num_classes_per_task = options.test_way,
+            num_classes_per_task = options.val_way,
             transform = Compose([ToTensor(),
                                  Normalize(mean = mean_pix,
                                            std = std_pix),
                                 ]),
-            target_transform = Categorical(num_classes = options.test_way),
+            target_transform = Categorical(num_classes = options.val_way),
             meta_val = True,
             download = False)
         dataset_val = ClassSplitter(dataset_val, shuffle = True,
@@ -128,12 +128,12 @@ def get_dataset(options):
             num_workers = options.num_workers)
         dataset_val = TieredImagenet(
           "data",
-          num_classes_per_task = options.test_way,
+          num_classes_per_task = options.val_way,
           transform = Compose([ToTensor(),
                                Normalize(mean = mean_pix,
                                          std = std_pix),
                               ]),
-          target_transform = Categorical(num_classes = options.test_way),
+          target_transform = Categorical(num_classes = options.val_way),
           meta_val = True,
           download = False)
         dataset_val = ClassSplitter(dataset_val, shuffle = True,
@@ -233,12 +233,12 @@ def get_dataset(options):
                 num_workers = options.num_workers)
         dataset_val = CIFARFS(
           "data",
-          num_classes_per_task = options.test_way,
+          num_classes_per_task = options.val_way,
           transform = Compose([ToTensor(),
                                Normalize(mean = mean_pix,
                                          std = std_pix),
                               ]),
-          target_transform = Categorical(num_classes = options.test_way),
+          target_transform = Categorical(num_classes = options.val_way),
           meta_val = True,
           download = False)
         dataset_val = ClassSplitter(dataset_val, shuffle = True,
@@ -338,12 +338,12 @@ def get_dataset(options):
                 num_workers = options.num_workers)
         dataset_val = FC100(
           "data",
-          num_classes_per_task = options.test_way,
+          num_classes_per_task = options.val_way,
           transform = Compose([ToTensor(),
                                Normalize(mean = mean_pix,
                                          std = std_pix),
                               ]),
-          target_transform = Categorical(num_classes = options.test_way),
+          target_transform = Categorical(num_classes = options.val_way),
           meta_val = True,
           download = False)
         dataset_val = ClassSplitter(dataset_val, shuffle = True,
@@ -379,7 +379,7 @@ if __name__ == '__main__':
                             help='number of query examples per validation class')
     parser.add_argument('--train-way', type=int, default=5,
                             help='number of classes in one training episode')
-    parser.add_argument('--test-way', type=int, default=5,
+    parser.add_argument('--val-way', type=int, default=5,
                             help='number of classes in one test (or validation) episode')
     parser.add_argument('--save-path', default='./experiments')
     parser.add_argument('--device', default='cuda')
@@ -639,18 +639,18 @@ if __name__ == '__main__':
             data_query = data_query.to(opt.device)
             labels_query = labels_query.to(opt.device)
 
-            test_n_support = opt.test_way * opt.val_shot
-            test_n_query = opt.test_way * opt.val_query
+            test_n_support = opt.val_way * opt.val_shot
+            test_n_query = opt.val_way * opt.val_query
 
             emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])))
             emb_support = emb_support.reshape(1, test_n_support, -1)
             emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
             emb_query = emb_query.reshape(1, test_n_query, -1)
 
-            logit_query = cls_head(emb_query, emb_support, labels_support, opt.test_way, opt.val_shot)
+            logit_query = cls_head(emb_query, emb_support, labels_support, opt.val_way, opt.val_shot)
 
-            loss = x_entropy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
-            acc = count_accuracy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
+            loss = x_entropy(logit_query.reshape(-1, opt.val_way), labels_query.reshape(-1))
+            acc = count_accuracy(logit_query.reshape(-1, opt.val_way), labels_query.reshape(-1))
 
             val_accuracies.append(acc.item())
             val_losses.append(loss.item())
