@@ -172,7 +172,7 @@ python train.py ./datasets/ \
 ```
 python train.py ./datasets/ \
     --run-name cifar-mtm-backprop \
-    --load "./results/reproduced-cifar/model.th" \
+    --load "./results/reproduced-cifar-5shot-5way/model.th" \
     --dataset cifarfs \
     --num-ways 5 \
     --num-shots 5 \
