@@ -9,7 +9,7 @@ from torchmeta.utils import gradient_update_parameters
 from maml.utils import tensors_to_device, compute_accuracy
 from spsa.multiclass_weights_optimize import TaskWeightingBase
 
-__all__ = ['ModelAgnosticMetaLearning', 'MAML', 'FOMAML']
+__all__ = ['ModelAgnosticMetaLearning', 'MAML']
 
 
 class ModelAgnosticMetaLearning:
@@ -263,14 +263,3 @@ class ModelAgnosticMetaLearning:
 
 MAML = ModelAgnosticMetaLearning
 
-
-class FOMAML(ModelAgnosticMetaLearning):
-    def __init__(self, model, optimizer=None, step_size=0.1,
-                 learn_step_size=False, per_param_step_size=False,
-                 num_adaptation_steps=1, scheduler=None,
-                 loss_function=F.cross_entropy, device=None):
-        super(FOMAML, self).__init__(model, optimizer=optimizer, first_order=True,
-                                     step_size=step_size, learn_step_size=learn_step_size,
-                                     per_param_step_size=per_param_step_size,
-                                     num_adaptation_steps=num_adaptation_steps, scheduler=scheduler,
-                                     loss_function=loss_function, device=device)
