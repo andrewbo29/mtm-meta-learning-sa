@@ -1,4 +1,4 @@
-# Multi-Task Meta-Learning Modification with Stochastic Approximation
+# Multi-Task Meta-Learning Modification with<br/> Stochastic Approximation
 
 This repository contains the code for the paper<br/> 
 "Multi-Task Meta-Learning Modification with Stochastic Approximation".
