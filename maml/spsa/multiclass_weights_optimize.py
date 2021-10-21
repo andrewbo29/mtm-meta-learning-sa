@@ -71,6 +71,7 @@ def get_param_strategy(strategy_type: str, initial_value: float, exp_gamma: Opti
     else:
         raise ValueError(f'Unknown {strategy_type=}')
 
+
 class TaskWeightingBase:
     def __init__(self, device):
         self.device = device
@@ -89,7 +90,6 @@ class TaskWeightingBase:
     @abc.abstractmethod
     def update_inner_weights(self, iteration, losses):
         pass
-
 
 
 class TaskWeightingNone(TaskWeightingBase):
@@ -178,7 +178,7 @@ class SinWeighting(TaskWeightingBase):
 
 
 class SpsaWeightingPerClass(TaskWeightingBase):
-    def __init__(self, max_classes, class_info_label, skip_for_iterations,
+    def __init__(self, max_classes, class_info_label,
                  alpha: SpsaParamStrategy, beta: SpsaParamStrategy, device):
         super().__init__(device)
 

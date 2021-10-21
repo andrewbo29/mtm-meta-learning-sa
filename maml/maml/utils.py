@@ -1,7 +1,6 @@
-import torch
-
 from collections import OrderedDict
-from torchmeta.modules import MetaModule
+
+import torch
 
 
 def compute_accuracy(logits, targets):

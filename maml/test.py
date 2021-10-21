@@ -6,7 +6,7 @@ from os import path
 
 from torchmeta.utils.data import BatchMetaDataLoader
 
-from maml.datasets import get_benchmark_by_name
+from maml.dataset_setup import get_benchmark_by_name
 from maml.metalearners import ModelAgnosticMetaLearning
 
 

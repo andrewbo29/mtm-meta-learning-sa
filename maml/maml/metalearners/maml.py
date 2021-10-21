@@ -7,7 +7,7 @@ from tqdm import tqdm
 from collections import OrderedDict
 from torchmeta.utils import gradient_update_parameters
 from maml.utils import tensors_to_device, compute_accuracy
-from spsa.multiclass_weights_optimize import TaskWeightingBase
+from spsa.multiclass_weights_optimize import TaskWeightingBase, WeightNormalizer, TaskWeightingNone
 
 __all__ = ['ModelAgnosticMetaLearning', 'MAML']
 
@@ -171,10 +171,9 @@ class ModelAgnosticMetaLearning:
 
         return params, results
 
-    def train(self, dataloader, task_weighting, weight_normalizer, min_weight,
-                  epoch, max_batches=500, silent=False, **kwargs):
-        iter = self.train_iter(dataloader, task_weighting, weight_normalizer, epoch, max_batches,
-                               min_weight)
+    def train(self, dataloader, task_weighting, weight_normalizer,
+              epoch, max_batches=500, silent=False, **kwargs):
+        iter = self.train_iter(dataloader, task_weighting, weight_normalizer, epoch, max_batches)
         with tqdm(iter, total=max_batches, disable=silent, **kwargs) as pbar:
             for results in pbar:
                 postfix = {'loss': f"{results['mean_outer_loss']:.4f}"}
@@ -183,7 +182,7 @@ class ModelAgnosticMetaLearning:
                 pbar.set_postfix(**postfix)
 
     def train_iter(self, dataloader, task_weighting: TaskWeightingBase, weight_normalizer: WeightNormalizer,
-                   epoch, max_batches, min_weight: Optional[float]):
+                   epoch, max_batches):
         if self.optimizer is None:
             raise RuntimeError('Trying to call `train_iter`, while the '
                                'optimizer is `None`. In order to train `{0}`, you must '
@@ -220,8 +219,6 @@ class ModelAgnosticMetaLearning:
 
                 if hasattr(task_weighting, 'weights'):
                     task_weighting.weights = weight_normalizer.normalize(iteration, task_weighting.weights)
-                    if min_weight is not None:
-                        task_weighting.weights = np.clip(task_weighting.weights, a_min=min_weight, a_max=None)
 
                 num_batches += 1
 
@@ -255,11 +252,10 @@ class ModelAgnosticMetaLearning:
                     break
 
                 batch = tensors_to_device(batch, device=self.device)
-                _, results = self.get_outer_losses(batch)
+                _, results = self.get_outer_losses(batch=batch, task_weighting=TaskWeightingNone(self.device))
                 yield results
 
                 num_batches += 1
 
 
 MAML = ModelAgnosticMetaLearning
-

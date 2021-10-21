@@ -62,19 +62,6 @@ def main(args):
                                               num_workers=args.num_workers,
                                               pin_memory=True)
     meta_optimizer = torch.optim.Adam(benchmark.model.parameters(), lr=args.meta_lr)
-    metalearner = ModelAgnosticMetaLearning(benchmark.model,
-                                            meta_optimizer,
-                                            first_order=args.first_order,
-                                            num_adaptation_steps=args.num_steps,
-                                            step_size=args.step_size,
-                                            loss_function=benchmark.loss_function,
-                                            device=device)
-
-    if args.load is not None:
-        with open(args.load, 'rb') as f:
-            benchmark.model.load_state_dict(torch.load(f, map_location=device))
-
-    best_value = None
 
     alpha = weighting.get_param_strategy(args.spsa_alpha_strategy,
                                          args.spsa_alpha,
@@ -109,14 +96,32 @@ def main(args):
         task_weighting = weighting.SinWeighting(args.batch_size, device)
     elif args.task_weighting == 'gradient':
         task_weighting = weighting.GradientWeighting(args.use_inner_optimizer, args.batch_size, device=device)
-        meta_optimizer = torch.optim.Adam(list(benchmark.model.parameters()) + task_weighting.outer_optimization_weights,
-                                          lr=args.meta_lr)
+        meta_optimizer = torch.optim.Adam(
+            list(benchmark.model.parameters()) + task_weighting.outer_optimization_weights,
+            lr=args.meta_lr)
     elif args.task_weighting == 'gradient-novel-loss':
         task_weighting = weighting.GradientNovelLossWeighting(args.use_inner_optimizer, args.batch_size, device=device)
-        meta_optimizer = torch.optim.Adam(list(benchmark.model.parameters()) + task_weighting.outer_optimization_weights,
-                                          lr=args.meta_lr)
+        meta_optimizer = torch.optim.Adam(
+            list(benchmark.model.parameters()) + task_weighting.outer_optimization_weights,
+            lr=args.meta_lr)
     else:
         raise ValueError(f'Unknown weighting value: {args.task_weighting}')
+
+    metalearner = ModelAgnosticMetaLearning(benchmark.model,
+                                            meta_optimizer,
+                                            first_order=args.first_order,
+                                            num_adaptation_steps=args.num_steps,
+                                            step_size=args.step_size,
+                                            loss_function=benchmark.loss_function,
+                                            device=device)
+
+    if args.load is not None:
+        with open(args.load, 'rb') as f:
+            benchmark.model.load_state_dict(torch.load(f, map_location=device))
+
+    best_value = None
+
+    weight_normalizer = weighting.WeightNormalizer(normalize_after=args.normalize_spsa_weights_after)
 
     # Training loop
     epoch_desc = 'Epoch {{0: <{0}d}}'.format(1 + int(math.log10(args.num_epochs)))
@@ -124,6 +129,7 @@ def main(args):
     for epoch in range(args.num_epochs):
         metalearner.train(meta_train_dataloader,
                           task_weighting,
+                          weight_normalizer,
                           epoch,
                           max_batches=args.num_batches,
                           silent=args.silent,
@@ -135,15 +141,10 @@ def main(args):
                                        desc=epoch_desc.format(epoch + 1))
 
         # Save best model
-        if 'accuracies_after' in results:
-            if (best_value is None) or (best_value < results['accuracies_after']):
-                best_value = results['accuracies_after']
-                save_model = True
-        elif (best_value is None) or (best_value > results['mean_outer_loss']):
-            best_value = results['mean_outer_loss']
+        save_model = False
+        if (best_value is None) or (best_value < results['accuracies_after']):
+            best_value = results['accuracies_after']
             save_model = True
-        else:
-            save_model = False
 
         if save_model and (args.output_folder is not None):
             with open(args.model_path, 'wb') as f:
@@ -208,8 +209,9 @@ if __name__ == '__main__':
 
     # SPSA
     parser.add_argument('--task-weighting', type=str,
-                        choices=['none', 'spsa-delta', 'spsa-per-class', 'spsa-track', 'sin',
+                        choices=['none', 'spsa-delta', 'spsa-per-class', 'spsa-track', 'sin', 'sin-rare',
                                  'spsa-per-coarse-class', 'gradient', 'gradient-novel-loss'],
+                        default='none', help='Type of multi-tasking weighting')
 
     parser.add_argument('--spsa-alpha-strategy', type=str,
                         choices=['exponential', 'constant', 'step'],
@@ -238,14 +240,12 @@ if __name__ == '__main__':
     parser.add_argument('--normalize-spsa-weights-after', type=int, default=None,
                         help='normalize spsa weights after specified number of iterations to avoid '
                              'loss explosion')
-    parser.add_argument('--min-weight', type=float, default=None,
-                        help='Min spsa weight allowed during optimization')
 
     # Gradient weighting
     parser.add_argument('--use-inner-optimizer', action='store_true', default=False,
                         help='Use inner gradient optimizer for task weight optimization '
                              '(in contrast to optimizing weights together with network weights)')
-    
+
     # Misc
     parser.add_argument('--run-name', type=str, default=None, help='Custom name for run results')
     parser.add_argument('--num-workers', type=int, default=1,
