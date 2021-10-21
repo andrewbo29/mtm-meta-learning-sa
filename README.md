@@ -19,7 +19,184 @@ To reproduce the results on benchmarks described in our article, use the followi
 ### MAML
 Multi-task modification (MTM) for Model-Agnostic Meta-Learning (MAML) ([Finn et al., 2017](https://arxiv.org/abs/1703.03400)).
 
-As
+As we have described in the paper, MAML MTM-SPSA is trained on top of the reproduced models. First, we define how to get reproduced models, then how we run MTM SPSA, finally how to run tests. We define run examples for all 4 datasets used.
+
+**miniImageNet (reproduced 1-shot 2-way):**
+```
+python train.py ./datasets/ \
+    --run-name reproduced-miniimagenet \
+    --dataset miniimagenet \
+    --num-ways 2 \
+    --num-shots 1 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 300 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**miniImageNet (MTM SPSA-Track 1-shot 2-way):**
+```
+python train.py ./datasets/ \
+    --run-name mini-imagenet-mtm-spsa-track \
+    --load "./results/reproduced-miniimagenet/model.th" \
+    --dataset miniimagenet \
+    --num-ways 2 \
+    --num-shots 1 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --task-weighting spsa-track \
+    --normalize-spsa-weights-after 100 \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 40 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**tieredImageNet (reproduced 1-shot 2-way):**
+```
+python train.py ./datasets/ \
+    --run-name reproduced-tieredimagenet \
+    --dataset tieredimagenet \
+    --num-ways 2 \
+    --num-shots 1 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 300 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**tieredImageNet (MTM SPSA 1-shot 2-way):**
+```
+python train.py ./datasets/ \
+    --run-name tiered-imagenet-mtm-spsa \
+    --load "./results/reproduced-tieredimagenet/model.th" \
+    --dataset tieredimagenet \
+    --num-ways 2 \
+    --num-shots 1 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --task-weighting spsa-delta \
+    --normalize-spsa-weights-after 100 \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 40 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**FC100 (reproduced 5-shot 5-way):**
+```
+python train.py ./datasets/ \
+    --run-name reproduced-fc100 \
+    --dataset fc100 \
+    --num-ways 5 \
+    --num-shots 5 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 300 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**FC100 (MTM SPSA-Coarse 5-shot 5-way):**
+```
+python train.py ./datasets/ \
+    --run-name fc100-mtm-spsa-coarse \
+    --load "./results/reproduced-fc100/model.th" \
+    --dataset cifarfs \
+    --num-ways 5 \
+    --num-shots 5 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --task-weighting spsa-per-coarse-class \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 40 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**CIFAR-FS (reproduced 1-shot 5-way):**
+```
+python train.py ./datasets/ \
+    --run-name reproduced-cifar \
+    --dataset cifarfs \
+    --num-ways 5 \
+    --num-shots 1 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 600 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**CIFAR-FS (MTM Inner First-Order 1-shot 5-way):**
+```
+python train.py ./datasets/ \
+    --run-name cifar-mtm-inner-first-order \
+    --load "./results/reproduced-cifar/model.th" \
+    --dataset cifarfs \
+    --num-ways 5 \
+    --num-shots 1 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --task-weighting gradient-novel-loss \
+    --use-inner-optimizer \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 40 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**CIFAR-FS (MTM Backprop 5-shot 5-way):**
+```
+python train.py ./datasets/ \
+    --run-name cifar-mtm-backprop \
+    --load "./results/reproduced-cifar/model.th" \
+    --dataset cifarfs \
+    --num-ways 5 \
+    --num-shots 5 \
+    --num-steps 5 \
+    --step-size 0.01 \
+    --task-weighting gradient-novel-loss \
+    --hidden-size 32 \
+    --batch-size 4 \
+    --num-workers 4 \
+    --num-epochs 40 \
+    --use-cuda \
+    --output-folder ./results
+```
+
+**To test** any of the above-described runs execute:
+```
+python test.py ./results/path-to-config/config.json --num-steps 10 --use-cuda
+```
+
+For instance, **to test miniImageNet (MTM SPSA-Track)** run the following:
+```
+python test.py ./results/mini-imagenet-mtm-spsa-track/config.json --num-steps 10 --use-cuda
+```
+
 
 ### Prototypical Networks
 Multi-task modification (MTM) for Prototypical Networks (ProtoNet) ([Snell et al., 2017](https://arxiv.org/abs/1703.05175)).
