@@ -19,9 +19,9 @@ To reproduce the results on benchmarks described in our article, use the followi
 ### MAML
 Multi-task modification (MTM) for Model-Agnostic Meta-Learning (MAML) ([Finn et al., 2017](https://arxiv.org/abs/1703.03400)).
 
-As we have described in the paper, MAML MTM-SPSA is trained on top of the reproduced models. First, we define how to get reproduced models, then how we run MTM SPSA, finally how to run tests. We define run examples for all 4 datasets used.
+Multi-task modifications for MAML are trained on top of baseline MAML model which has to be trained beforehand.
 
-**miniImageNet (reproduced 1-shot 2-way):**
+To train **MAML (reproduced) on miniImageNet 1-shot 2-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name reproduced-miniimagenet \
@@ -33,8 +33,7 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**miniImageNet (MTM SPSA-Track 1-shot 2-way):**
+To train **MAML MTM SPSA-Track on miniImageNet 1-shot 2-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name mini-imagenet-mtm-spsa-track \
@@ -49,8 +48,7 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**tieredImageNet (reproduced 1-shot 2-way):**
+To train **MAML (reproduced) on tieredImageNet 1-shot 2-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name reproduced-tieredimagenet \
@@ -62,8 +60,7 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**tieredImageNet (MTM SPSA 1-shot 2-way):**
+To train **MAML MTM SPSA on tieredImageNet 1-shot 2-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name tiered-imagenet-mtm-spsa \
@@ -78,8 +75,7 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**FC100 (reproduced 5-shot 5-way):**
+To train **MAML (reproduced) on FC100 5-shot 5-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name reproduced-fc100 \
@@ -91,8 +87,7 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**FC100 (MTM SPSA-Coarse 5-shot 5-way):**
+To train **MAML MTM SPSA-Coarse on FC100 5-shot 5-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name fc100-mtm-spsa-coarse \
@@ -106,8 +101,7 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**CIFAR-FS (reproduced 1-shot 5-way):**
+To train **MAML (reproduced) on CIFAR-FS 1-shot 5-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name reproduced-cifar \
@@ -119,8 +113,7 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**CIFAR-FS (MTM Inner First-Order 1-shot 5-way):**
+To train **MAML MTM Inner First-Order on CIFAR-FS 1-shot 5-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name cifar-mtm-inner-first-order \
@@ -135,28 +128,26 @@ python maml/train.py ./datasets/ \
     --use-cuda \
     --output-folder ./results
 ```
-
-**CIFAR-FS (MTM Backprop 5-shot 5-way):**
+To train **MAML MTM Backprop on CIFAR-FS 1-shot 5-way** benchmark, run:
 ```
 python maml/train.py ./datasets/ \
     --run-name cifar-mtm-backprop \
     --load "./results/reproduced-cifar-5shot-5way/model.th" \
     --dataset cifarfs \
     --num-ways 5 \
-    --num-shots 5 \
+    --num-shots 1 \
     --num-steps 5 \
     --task-weighting gradient-novel-loss \
     --num-epochs 40 \
     --use-cuda \
     --output-folder ./results
 ```
-
-**To test** any of the above-described runs execute:
+To test any of the above-described benchmarks, run:
 ```
 python maml/test.py ./results/path-to-config/config.json --num-steps 10 --use-cuda
 ```
 
-For instance, **to test miniImageNet (MTM SPSA-Track)** run the following:
+For instance, to test **MAML MTM SPSA-Track on miniImageNet 1-shot 2-way** benchmark, run:
 ```
 python maml/test.py ./results/mini-imagenet-mtm-spsa-track/config.json --num-steps 10 --use-cuda
 ```
@@ -165,35 +156,35 @@ python maml/test.py ./results/mini-imagenet-mtm-spsa-track/config.json --num-ste
 ### Prototypical Networks
 Multi-task modification (MTM) for Prototypical Networks (ProtoNet) ([Snell et al., 2017](https://arxiv.org/abs/1703.05175)).
 
-To train ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
+To train **ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way** benchmark, run:
 ```
 python protonet/train.py --dataset miniImageNet --network ResNet12 --tracking --train-shot 1 --train-way 5 --val-shot 1 --val-way 5
 ```
-To test ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way benchmark:
+To test **ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way** benchmark, run:
 ```
 python protonet/test.py --dataset miniImageNet --network ResNet12 --shot 1 --way 5
 ```
-To train ProtoNet MTM Backprop with 64-64-64-64 backbone on CIFAR-FS 1-shot 2-way benchmark:
+To train **ProtoNet MTM Backprop with 64-64-64-64 backbone on CIFAR-FS 1-shot 2-way** benchmark, run:
 ```
 python protonet/train.py --dataset CIFAR_FS --train-weights --train-weights-layer --train-shot 1 --train-way 2 --val-shot 1 --val-way 2
 ```
-To test ProtoNet MTM Backprop with 64-64-64-64 backbone on CIFAR-FS 1-shot 5-way benchmark:
+To test **ProtoNet MTM Backprop with 64-64-64-64 backbone on CIFAR-FS 1-shot 5-way** benchmark, run:
 ```
 python protonet/test.py --dataset CIFAR_FS --shot 1 --way 2
 ```
-To train ProtoNet MTM Inner First-Order with 64-64-64-64 backbone on FC100 10-shot 5-way benchmark:
+To train **ProtoNet MTM Inner First-Order with 64-64-64-64 backbone on FC100 10-shot 5-way** benchmark, run:
 ```
 python protonet/train.py --dataset FC100 --train-weights --train-weights-opt --train-shot 10 --train-way 5 --val-shot 10 --val-way 5
 ```
-To test ProtoNet MTM Inner First-Order with 64-64-64-64 backbone on FC100 10-shot 5-way benchmark:
+To test **ProtoNet MTM Inner First-Order with 64-64-64-64 backbone on FC100 10-shot 5-way** benchmark, run:
 ```
 python protonet/test.py --dataset FC100 --shot 10 --way 5
 ```
-To train ProtoNet MTM SPSA with 64-64-64-64 backbone on tieredImageNet 5-shot 2-way benchmark:
+To train **ProtoNet MTM SPSA with 64-64-64-64 backbone on tieredImageNet 5-shot 2-way** benchmark, run:
 ```
 python protonet/train.py --dataset tieredImageNet --train-shot 5 --train-way 2 --val-shot 5 --val-way 2
 ```
-To test ProtoNet MTM SPSA with 64-64-64-64 backbone on tieredImageNet 5-shot 2-way benchmark:
+To test **ProtoNet MTM SPSA with 64-64-64-64 backbone on tieredImageNet 5-shot 2-way** benchmark, run:
 ```
 python protonet/test.py --dataset tieredImageNet --shot 5 --way 2
 ```
