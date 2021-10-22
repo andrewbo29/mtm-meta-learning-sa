@@ -419,7 +419,8 @@ if __name__ == '__main__':
                             help='train weights like a layer with spsa loss')
     parser.add_argument('--train-weights-opt', action='store_true',
                             help='train weights with separate optimizer')
-    parser.add_argument('--weight_decay', type=float, default=5e-4)
+    parser.add_argument('--weight_decay', type=float, default=5e-4,
+                            help='weight decay for SGD')
 
     opt = parser.parse_args()
 
@@ -441,18 +442,18 @@ if __name__ == '__main__':
         optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                     {'params': cls_head.parameters()},
                                     {'params': weights}], lr=0.1,
-                                    momentum=0.9, weight_decay=5e-4, nesterov=True)
+                                    momentum=0.9, weight_decay=opt.weight_decay, nesterov=True)
       elif opt.train_weights_opt:
         optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                    {'params': cls_head.parameters()}], lr=0.1,
-                                   momentum=0.9, weight_decay=5e-4, nesterov=True)
+                                   momentum=0.9, weight_decay=opt.weight_decay, nesterov=True)
         optimizer1 = torch.optim.Adam([{'params': weights}], lr=1e-3)
     elif opt.coarse_weights:
       weights = np.ones(20)
       loss_hist = torch.zeros(20, device=opt.device)
       optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                    {'params': cls_head.parameters()}], lr=0.1,
-                                   momentum=0.9, weight_decay=5e-4, nesterov=True)
+                                   momentum=0.9, weight_decay=opt.weight_decay, nesterov=True)
     else:
       weights = np.array([1 / opt.task_number for _ in range(opt.task_number)])
       optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
