@@ -237,7 +237,7 @@ python protonet/test.py --dataset tieredImageNet --shot 5 --way 2
 
 ## Acknowledgments
 
-Our code uses some dataloaders and models implementations from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta).
+Our code uses some dataloaders and model implementations from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta).
 
 Code in maml folder is based on the extended implementation from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta) and [**pytorch-maml**](https://github.com/tristandeleu/pytorch-maml). The code has been updated so that baseline scores more closely follow those of the original MAML paper.
 
