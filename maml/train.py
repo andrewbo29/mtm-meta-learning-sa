@@ -180,16 +180,15 @@ if __name__ == '__main__':
                              'of training examples `--num-shots` (default: 15).')
 
     # Model
-    parser.add_argument('--hidden-size', type=int, default=64,
-                        help='Number of channels in each convolution layer of the network '
-                             '(default: 64).')
+    parser.add_argument('--hidden-size', type=int, default=32,
+                        help='Number of channels in each convolution layer of the network.')
     # Should be False for cifarfs and miniimagenet, True for omniglot
     parser.add_argument('--no-max-pool', action='store_true', default=False,
                         help='True to use strided conv model, False to use MaxPooled model')
 
     # Optimization
-    parser.add_argument('--batch-size', type=int, default=25,
-                        help='Number of tasks in a batch of tasks (default: 25).')
+    parser.add_argument('--batch-size', type=int, default=4,
+                        help='Number of tasks in a batch of tasks.')
     parser.add_argument('--num-steps', type=int, default=1,
                         help='Number of fast adaptation steps, ie. gradient descent '
                              'updates (default: 1).')
@@ -197,9 +196,9 @@ if __name__ == '__main__':
                         help='Number of epochs of meta-training (default: 50).')
     parser.add_argument('--num-batches', type=int, default=100,
                         help='Number of batch of tasks per epoch (default: 100).')
-    parser.add_argument('--step-size', type=float, default=0.1,
+    parser.add_argument('--step-size', type=float, default=0.01,
                         help='Size of the fast adaptation step, ie. learning rate in the '
-                             'gradient descent update (default: 0.1).')
+                             'gradient descent update.')
     parser.add_argument('--first-order', action='store_true',
                         help='Use the first order approximation, do not use higher-order '
                              'derivatives during meta-optimization.')
@@ -248,8 +247,8 @@ if __name__ == '__main__':
 
     # Misc
     parser.add_argument('--run-name', type=str, default=None, help='Custom name for run results')
-    parser.add_argument('--num-workers', type=int, default=1,
-                        help='Number of workers to use for data-loading (default: 1).')
+    parser.add_argument('--num-workers', type=int, default=4,
+                        help='Number of workers to use for data-loading.')
     parser.add_argument('--silent', action='store_true', default=False)
     parser.add_argument('--use-cuda', action='store_true')
 
