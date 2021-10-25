@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from qpth.qp import QPFunction
 from torch.autograd import Variable
 
 
@@ -22,6 +23,12 @@ def computeGramMatrix(A, B):
     assert(A.size(0) == B.size(0) and A.size(2) == B.size(2))
 
     return torch.bmm(A, B.transpose(1,2))
+
+
+def batched_kronecker(matrix1, matrix2):
+    matrix1_flatten = matrix1.reshape(matrix1.size()[0], -1)
+    matrix2_flatten = matrix2.reshape(matrix2.size()[0], -1)
+    return torch.bmm(matrix1_flatten.unsqueeze(2), matrix2_flatten.unsqueeze(1)).reshape([matrix1.size()[0]] + list(matrix1.size()[1:]) + list(matrix2.size()[1:])).permute([0, 1, 3, 2, 4]).reshape(matrix1.size(0), matrix1.size(1) * matrix2.size(1), matrix1.size(2) * matrix2.size(2))
 
 
 def ProtoNetHead(query, support, support_labels, n_way, n_shot, device, normalize=True):

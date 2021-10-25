@@ -1,5 +1,7 @@
+cvxpy
 scipy
 torch==1.8.1
 torchmeta==1.7.0
 torchvision==0.9.1
 tqdm
+qpth==0.0.15
