@@ -628,7 +628,7 @@ if __name__ == '__main__':
 
           if opt.train_weights == opt.epoch_spsa:
             if not opt.coarse_weights:
-                weights = weights / np.sum(weights)
+                weights = weights / np.linalg.norm(weights, ord=2)
 
         lr_scheduler.step()
         # Evaluate on the validation split
