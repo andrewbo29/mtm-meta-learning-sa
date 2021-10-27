@@ -429,6 +429,10 @@ if __name__ == '__main__':
                             help='train weights with separate optimizer')
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                             help='weight decay for SGD')
+    parser.add_argument('--load', type=str, default='',
+                            help='path of the pretrained checkpoint file')
+    parser.add_argument('--start', type=int, default=0,
+                            help='epoch to start training from')
 
     opt = parser.parse_args()
 
@@ -443,6 +447,13 @@ if __name__ == '__main__':
     weight_file_path = os.path.join(opt.save_path, "weight_log.txt")
 
     (embedding_net, cls_head) = get_model(opt)
+    # Load saved model checkpoints
+    if opt.load != '':
+        saved_models = torch.load(opt.load)
+        embedding_net.load_state_dict(saved_models['embedding'])
+        embedding_net.eval()
+        cls_head.load_state_dict(saved_models['head'])
+        cls_head.eval()
 
     if opt.train_weights:
       weights = torch.ones(opt.task_number, device=opt.device, requires_grad = True)
@@ -468,7 +479,7 @@ if __name__ == '__main__':
                                    {'params': cls_head.parameters()}], lr=0.1,
                                    momentum=0.9, weight_decay=opt.weight_decay, nesterov=True)
 
-    lambda_epoch = lambda e: (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) if e < opt.pretrain or opt.train_weights else (1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))) / 10
+    lambda_epoch = lambda e: (1.0 if e <= 20 else (0.06 if e <= 40 else 0.012 if e <= 50 else (0.0024))) if e <= opt.pretrain or opt.train_weights else (1.0 if e <= 20 else (0.06 if e <= 40 else 0.012 if e <= 50 else (0.0024))) / 10
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
 
     max_val_acc = 0.0
@@ -483,7 +494,7 @@ if __name__ == '__main__':
     else:
         spsa_start = opt.num_epoch + 1
 
-    for epoch in range(1, opt.num_epoch + 1):
+    for epoch in range(opt.start + 1, opt.num_epoch + 1):
         # Train on the training split
         losses_all = []
         acc_all = []
