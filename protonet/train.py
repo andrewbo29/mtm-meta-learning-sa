@@ -451,9 +451,7 @@ if __name__ == '__main__':
     if opt.load != '':
         saved_models = torch.load(opt.load)
         embedding_net.load_state_dict(saved_models['embedding'])
-        embedding_net.eval()
         cls_head.load_state_dict(saved_models['head'])
-        cls_head.eval()
 
     if opt.train_weights:
       weights = torch.ones(opt.task_number, device=opt.device, requires_grad = True)
