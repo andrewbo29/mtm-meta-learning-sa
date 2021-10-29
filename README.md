@@ -3,7 +3,7 @@
 This repository contains the code for the paper<br/> 
 "Multi-Task Meta-Learning Modification with Stochastic Approximation".
 
-![Method pipeline](https://github.com/andrewbo29/mtm-meta-learning-sa/blob/master/mtm_pipeline.png)
+![Method pipeline](./mtm_pipeline.png)
 
 ## Dependencies
 This code has been tested on Ubuntu 16.04 with Python 3.8 and PyTorch 1.8.
