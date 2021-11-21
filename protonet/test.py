@@ -27,14 +27,8 @@ def get_model(options):
         print ("Cannot recognize the network type")
         assert(False)
 
-    # Choose the classification head
-    if options.head == 'Proto':
-        cls_head = ClassificationHead(options.device, base_learner='Proto').to(options.device)
-    elif options.head == 'SVM':
-        cls_head = ClassificationHead(options.device, base_learner='SVM').to(options.device)
-    else:
-        print ("Cannot recognize the base learner type")
-        assert(False)
+    # Set the classification head
+    cls_head = ClassificationHead(options.device).to(options.device)
 
     return (network, cls_head)
 
@@ -171,8 +165,6 @@ if __name__ == '__main__':
                             help='number of query examples per training class')
     parser.add_argument('--network', type=str, default='ProtoNet',
                             help='choose which embedding network to use: ProtoNet, ResNet12, ResNet18')
-    parser.add_argument('--head', type=str, default='Proto',
-                            help='choose which classification head to use: Proto, SVM')
     parser.add_argument('--dataset', type=str, default='miniImageNet',
                             help='choose which classification head to use: miniImageNet, tieredImageNet, CIFAR_FS, FC100')
 
@@ -215,10 +207,7 @@ if __name__ == '__main__':
         emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         emb_query = emb_query.reshape(1, n_query, -1)
 
-        if opt.head == 'SVM':
-            logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot, maxIter=3)
-        else:
-            logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
+        logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
 
         acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1))
         test_accuracies.append(acc.item())

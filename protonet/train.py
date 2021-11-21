@@ -33,14 +33,8 @@ def get_model(options):
         print ("Cannot recognize the network type")
         assert(False)
 
-    # Choose the classification head
-    if options.head == 'Proto':
-        cls_head = ClassificationHead(options.device, base_learner='Proto').to(options.device)
-    elif options.head == 'SVM':
-        cls_head = ClassificationHead(options.device, base_learner='SVM').to(options.device)
-    else:
-        print ("Cannot recognize the base learner type")
-        assert(False)
+    # Set the classification head
+    cls_head = ClassificationHead(options.device).to(options.device)
 
     return (network, cls_head)
 
@@ -393,8 +387,6 @@ if __name__ == '__main__':
                             help='number of cpu workers for loading data')
     parser.add_argument('--network', type=str, default='ProtoNet',
                             help='choose which embedding network to use: ProtoNet, ResNet12, ResNet18')
-    parser.add_argument('--head', type=str, default='Proto',
-                            help='choose which classification head to use: Proto, SVM')
     parser.add_argument('--dataset', type=str, default='miniImageNet',
                             help='choose which classification head to use: miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--episodes-per-batch', type=int, default=8,
