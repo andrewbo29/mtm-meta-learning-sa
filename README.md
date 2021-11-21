@@ -156,12 +156,13 @@ python maml/test.py ./results/mini-imagenet-mtm-spsa-track/config.json --num-ste
 ### Prototypical Networks
 Multi-task modification (MTM) for Prototypical Networks (ProtoNet) ([Snell et al., 2017](https://arxiv.org/abs/1703.05175)).
 
-To train **ProtoNet MTM SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way** benchmark, run:
+To train **ProtoNet MTM (2 tasks) SPSA-Track with ResNet-12 backbone on miniImageNet 1-shot 5-way** benchmark, run:
 ```
 python protonet/train.py \
     --dataset miniImageNet \
     --network ResNet12 \
     --tracking \
+    --task-number 2 \
     --train-shot 1 \
     --train-way 5 \
     --val-shot 1 \
