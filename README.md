@@ -152,7 +152,6 @@ For instance, to test **MAML MTM SPSA-Track on miniImageNet 1-shot 2-way** bench
 python maml/test.py ./results/mini-imagenet-mtm-spsa-track/config.json --num-steps 10 --use-cuda
 ```
 
-
 ### Prototypical Networks
 Multi-task modification (MTM) for Prototypical Networks (ProtoNet) ([Snell et al., 2017](https://arxiv.org/abs/1703.05175)).
 
@@ -216,7 +215,6 @@ To test **ProtoNet MTM SPSA with 64-64-64-64 backbone on tieredImageNet 5-shot 2
 python protonet/test.py --dataset tieredImageNet --shot 5 --way 2
 ```
 
-
 ## Acknowledgments
 
 Our code uses some dataloaders from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta).
@@ -224,3 +222,15 @@ Our code uses some dataloaders from [**Torchmeta**](https://github.com/tristande
 Code in maml folder is based on the extended implementation from [**Torchmeta**](https://github.com/tristandeleu/pytorch-meta) and [**pytorch-maml**](https://github.com/tristandeleu/pytorch-maml). The code has been updated so that baseline scores more closely follow those of the original MAML paper.
 
 Code in protonet folder is based on the implementation from [**MetaOptNet**](https://github.com/kjunelee/MetaOptNet). All .py files in this folder except for dataloaders.py and optimize.py were adopted from this implementation and modified afterwards. A copy of Apache License, Version 2.0 is available in protonet folder.
+
+## Citation
+
+If you want to cite our paper, you can use the following BibTeX entry:
+```
+@article{boiarov2021multi,
+  title={Multi-Task Meta-Learning Modification with Stochastic Approximation},
+  author={Boiarov, Andrei and Khabarlak, Konstantin and Yastrebov, Igor},
+  journal={arXiv preprint arXiv:2110.13188},
+  year={2021}
+}
+```
