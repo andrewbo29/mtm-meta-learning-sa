@@ -1,7 +1,7 @@
-# Multi-Task Meta-Learning Modification with Stochastic Approximation
+# Simultaneous Perturbation Method for Multi-Task Weight Optimization in One-Shot Meta-Learning
 
 This repository contains the code for the paper<br/> 
-[**"Multi-Task Meta-Learning Modification with Stochastic Approximation"**](https://arxiv.org/abs/2110.13188).
+[**"Simultaneous Perturbation Method for Multi-Task Weight Optimization in One-Shot Meta-Learning"**](https://arxiv.org/abs/2110.13188).
 
 ![Method pipeline](./mtm_pipeline.png)
 
@@ -228,8 +228,8 @@ Code in protonet folder is based on the implementation from [**MetaOptNet**](htt
 If you want to cite our paper, you can use the following BibTeX entry:
 ```
 @article{boiarov2021multi,
-  title={Multi-Task Meta-Learning Modification with Stochastic Approximation},
-  author={Boiarov, Andrei and Khabarlak, Konstantin and Yastrebov, Igor},
+  title={Simultaneous Perturbation Method for Multi-Task Weight Optimization in One-Shot Meta-Learning},
+  author={Boiarov, Andrei and Khabarlak, Kostiantyn and Yastrebov, Igor},
   journal={arXiv preprint arXiv:2110.13188},
   year={2021}
 }
